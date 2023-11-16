@@ -2,6 +2,7 @@
 
 char *as_ip = DEFAULT_IP; //idk what to do here
 char *as_port = DEFAULT_PORT;
+int loged_in = 0;
 
 void filter_input(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
@@ -14,49 +15,58 @@ void filter_input(int argc, char **argv) {
     }
 }
 
-void login(char *buffer) {
-    int fd, errcode;
-    ssize_t n;
-    socklen_t addrlen;
-    struct addrinfo hints, *res;
+void udp(char *buffer, size_t size, char *msg_received){ 
+    struct addrinfo hints,*res;
+    int fd,errcode;
     struct sockaddr_in addr;
-    char status[4];
-    char uid[7];
-    char password[9];
+    socklen_t addrlen;
+    ssize_t n;
 
-    (void) buffer; //just to troll the termainal
+    fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
+    if(fd==-1)//error
+        exit(1);
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0); 
-    if (fd==-1) //error
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET;//IPv4
+    hints.ai_socktype=SOCK_DGRAM;//UDP socket
+    errcode=getaddrinfo(as_ip,as_port,&hints,&res);
+    if(errcode!=0)//error
         exit(1);
-    
-    memset(&hints, 0, sizeof hints); 
-    hints.ai_family=AF_INET;
-    hints.ai_socktype=SOCK_DGRAM;
-    
-    errcode = getaddrinfo(as_ip, as_port, &hints, &res);
-    if (errcode!=0) //error 
+    n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
+    if(n==-1)//error
         exit(1);
-    
-    n = sendto(fd, "LIN", 3, 0, res->ai_addr, res->ai_addrlen); 
-    if (n==-1) //error
+    addrlen=sizeof(addr);
+    n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
+    if(n==-1)//error
         exit(1);
-    n = sendto(fd, uid, 6, 0, res->ai_addr, res->ai_addrlen); 
-    if (n==-1) //error
-        exit(1);
-    n = sendto(fd, password, 8, 0, res->ai_addr, res->ai_addrlen); 
-    if (n==-1) //error
-        exit(1);
-    
-    addrlen = sizeof(addr);
-    n = recvfrom(fd, status, 3, 0, (struct sockaddr*) &addr, &addrlen);
-    if (n==-1) //error
-        exit(1);
-    
-    n = write(1, status, 3);
-    
     freeaddrinfo(res);
     close(fd);
+}
+
+void login() {
+    char msg_received[9];
+    const char *login_data[2];
+    ssize_t n;
+    char command[4];
+    (void)n;
+
+    login_data[0] = strtok(NULL, "\n");
+    login_data[1] = strtok(NULL, "\n");
+    char *buffer = build_string("LIN", login_data, 2);
+
+    udp(buffer, 9, msg_received);
+    strncpy(command, msg_received, 3);
+    command[3] = '\0';
+    if(strcmp(command, "RLI") || msg_received[3] != ' ')
+        printf("%s\n", msg_received);
+    else if(msg_received[4] == 'R' && msg_received[5] == 'E' && msg_received[6] == 'G' && msg_received[7] == '\n')
+        printf("new %s registered\n", login_data[0]);
+    else if(msg_received[4] == 'N' && msg_received[5] == 'O' && msg_received[6] == 'K' && msg_received[7] == '\n')
+        printf("incorrect login attempt\n");
+    else if(msg_received[4] == 'O' && msg_received[5] == 'K' && msg_received[6] == '\n')
+        printf("successful login\n");
+    else
+        printf("%s\n", msg_received);
 }
 
 int main(int argc, char **argv) {
@@ -75,8 +85,7 @@ int main(int argc, char **argv) {
         char *first_word = strtok(input_buffer, "\n");
     
         if (!strcmp("login", first_word))
-            //login(input_buffer);
-            printf("A\n");
+            login();
         else if (!strcmp("logout", first_word))
             printf("B\n");
         else if (!strcmp("unregister", first_word))

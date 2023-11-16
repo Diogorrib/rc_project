@@ -5,6 +5,7 @@
 #include "../common/constant.h"
 
 void filter_input(int argc, char **argv);
-void login(char* buffer);
+void udp(char *buffer, size_t size, char *msg_received);
+void login();
 
 #endif // __USER_H__
