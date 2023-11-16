@@ -4,6 +4,11 @@
 #include "../common/utils.h"
 #include "../common/constant.h"
 
+/* struct Login {
+    char uid[7];
+    int logged_in = 0;
+}; */
+
 void filter_input(int argc, char **argv);
 void udp(char *buffer, size_t size, char *msg_received);
 void login();

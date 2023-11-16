@@ -1,8 +1,10 @@
 #include "user.h"
 
-char *as_ip = DEFAULT_IP; //idk what to do here
+char *as_ip = DEFAULT_IP;
 char *as_port = DEFAULT_PORT;
-int loged_in = 0;
+int logged_in = 0;
+char uid[7];
+char password[9];
 
 void filter_input(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
@@ -43,28 +45,122 @@ void udp(char *buffer, size_t size, char *msg_received){
     close(fd);
 }
 
+/* struct Login users[12000]; // Assuming a fixed size for simplicity
+
+void insert(int key, const char* value) {
+    for (int i = 0; i < n_users; i++){
+        if (!strcmp(users[key].uid, uid))
+            return;
+    }
+}
+
+int logged_in(const char* uid) {
+    for (int i = 0; i < n_users; i++){
+        if (!strcmp(users[key].uid, uid))
+            return users[key].logged_in;
+    }
+    return -1; //user not registered
+} */
+
 void login() {
     char msg_received[9];
     const char *login_data[2];
-    ssize_t n;
+    char *buffer;
     char command[4];
-    (void)n;
+    char status[5];
 
     login_data[0] = strtok(NULL, "\n");
     login_data[1] = strtok(NULL, "\n");
-    char *buffer = build_string("LIN", login_data, 2);
+    buffer = build_string("LIN", login_data, 2);
+    if(strlen(login_data[0]) != 6 || strlen(login_data[1]) != 8){
+        printf("incorrect login attempt\n");
+        return;
+    }
 
+    msg_received[7] = '\0';
+    msg_received[8] = '\0';
     udp(buffer, 9, msg_received);
     strncpy(command, msg_received, 3);
     command[3] = '\0';
-    if(strcmp(command, "RLI") || msg_received[3] != ' ')
-        printf("%s\n", msg_received);
-    else if(msg_received[4] == 'R' && msg_received[5] == 'E' && msg_received[6] == 'G' && msg_received[7] == '\n')
+    strncpy(status, msg_received+4, 5);
+    if(strcmp(command, "RLI") || msg_received[3] != ' ' || msg_received[8] != '\0')
+        printf("%s\n", msg_received); 
+    else if(!strcmp(status, "REG\n")){
         printf("new %s registered\n", login_data[0]);
-    else if(msg_received[4] == 'N' && msg_received[5] == 'O' && msg_received[6] == 'K' && msg_received[7] == '\n')
+        strcpy(uid, login_data[0]);
+        strcpy(password, login_data[1]);
+        logged_in = 1;
+    }
+    else if(!strcmp(status, "NOK\n"))
         printf("incorrect login attempt\n");
-    else if(msg_received[4] == 'O' && msg_received[5] == 'K' && msg_received[6] == '\n')
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
         printf("successful login\n");
+        strcpy(uid, login_data[0]);
+        strcpy(password, login_data[1]);
+        logged_in = 1;
+    }
+    else
+        printf("%s\n", msg_received);
+}
+
+void logout() {
+    char msg_received[9];
+    const char *login_data[2];
+    char *buffer;
+    char command[4];
+    char status[5];
+
+    login_data[0] = uid;
+    login_data[1] = password;
+    buffer = build_string("LOU", login_data, 2);
+
+    msg_received[7] = '\0';
+    msg_received[8] = '\0';
+    udp(buffer, 9, msg_received);
+    strncpy(command, msg_received, 3);
+    command[3] = '\0';
+    strncpy(status, msg_received+4, 5);
+    if(strcmp(command, "RLO") || msg_received[3] != ' ' || msg_received[8] != '\0')
+        printf("%s\n", msg_received); 
+    else if(!strcmp(status, "NOK\n"))
+        printf("%s not logged in\n", login_data[0]);
+    else if(!strcmp(status, "UNR\n"))
+        printf("unknown %s\n", login_data[0]);
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
+        printf("successful logout\n");
+        logged_in = 0;
+    }
+    else
+        printf("%s\n", msg_received);
+}
+
+void unregister() {
+    char msg_received[9];
+    const char *login_data[2];
+    char *buffer;
+    char command[4];
+    char status[5];
+
+    login_data[0] = uid;
+    login_data[1] = password;
+    buffer = build_string("UNR", login_data, 2);
+
+    msg_received[7] = '\0';
+    msg_received[8] = '\0';
+    udp(buffer, 9, msg_received);
+    strncpy(command, msg_received, 3);
+    command[3] = '\0';
+    strncpy(status, msg_received+4, 5);
+    if(strcmp(command, "RUR") || msg_received[3] != ' ' || msg_received[8] != '\0')
+        printf("%s\n", msg_received); 
+    else if(!strcmp(status, "NOK\n"))
+        printf("incorrect unregister attempt\n");
+    else if(!strcmp(status, "UNR\n"))
+        printf("unknown %s\n", login_data[0]);
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
+        printf("successful unregister\n");
+        logged_in = 0;
+    }
     else
         printf("%s\n", msg_received);
 }
@@ -74,6 +170,10 @@ int main(int argc, char **argv) {
     
     if (argc > 1) 
         filter_input(argc, argv);
+
+    /* uid and password initialized as empty string to make requests without error */
+    uid[0] = '\0';
+    password[0] = '\0';
 
     while(1) {
         if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
@@ -87,12 +187,14 @@ int main(int argc, char **argv) {
         if (!strcmp("login", first_word))
             login();
         else if (!strcmp("logout", first_word))
-            printf("B\n");
+            logout();
         else if (!strcmp("unregister", first_word))
-            printf("C\n");
-        else if (!strcmp("exit", first_word))
-            //check if user is logged out
-            break;
+            unregister();
+        else if (!strcmp("exit", first_word)) {
+            if (logged_in)
+                printf("Please logout first.\n");
+            else break;
+        }
         else if (!strcmp("open", first_word))
             printf("D\n");
         else if (!strcmp("close", first_word))
