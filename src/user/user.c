@@ -2,22 +2,24 @@
 
 char *as_ip = DEFAULT_IP;
 char *as_port = DEFAULT_PORT;
-int logged_in = 0;
-char uid[7];
-char password[9];
+char uid[UID+1];
+char password[PASSWORD+1];
+int logged_in = 0;  // if logged in 1, if not logged in 0
 
 void filter_input(int argc, char **argv) {
+    if (argc > 1) // only one argument no need for updates
+        return;
     for (int i = 1; i < argc; i++) {
-
+        /* update the ip to use during this user app */
         if (!strcmp(argv[i], "-n"))
             as_ip = argv[i+1];
-
+        /* update the port to use during this user app */
         else if (!strcmp(argv[i], "-p"))
-            as_port = argv[i+1];   
+            as_port = argv[i+1];
     }
 }
 
-void udp(char *buffer, size_t size, char *msg_received){ 
+int udp(char *buffer, size_t size, char *msg_received) { 
     struct addrinfo hints,*res;
     int fd,errcode;
     struct sockaddr_in addr;
@@ -25,24 +27,39 @@ void udp(char *buffer, size_t size, char *msg_received){
     ssize_t n;
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
-    if(fd==-1)//error
-        exit(1);
+    if(fd==-1) {//error
+        printf("Can't connect with the server AS. Try again");
+        return -1;
+    }
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET;//IPv4
     hints.ai_socktype=SOCK_DGRAM;//UDP socket
+
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(errcode!=0)//error
-        exit(1);
+    if(errcode!=0) {//error
+        printf("Can't connect with the server AS. Try again");
+        return -1;
+    }
+
+    /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
-    if(n==-1)//error
-        exit(1);
+    if(n==-1) {//error
+        printf("Can't connect with the server AS. Try again");
+        return -1;
+    }
+
     addrlen=sizeof(addr);
+    /* receive message from AS */
     n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
-    if(n==-1)//error
-        exit(1);
+    if(n==-1) {//error
+        printf("Can't connect with the server AS. Try again");
+        return -1;
+    }
+
     freeaddrinfo(res);
     close(fd);
+    return 0;
 }
 
 /* struct Login users[12000]; // Assuming a fixed size for simplicity
@@ -62,13 +79,25 @@ int logged_in(const char* uid) {
     return -1; //user not registered
 } */
 
+void user_login(const char **login_data) {
+    strcpy(uid, login_data[0]);
+    strcpy(password, login_data[1]);
+    logged_in = 1;
+}
+
 void login() {
-    char msg_received[9];
+    char msg_received[LOGIN_MSG];
     const char *login_data[2];
     char *buffer;
-    char command[4];
+    char command[COMMAND+1];
     char status[5];
 
+    if (logged_in) { // only one user can be logged in per user app
+        printf("%s already logged in.\nPlease logout to use another user or login again", uid);
+        return;
+    }
+
+    /* read arguments uid and password from the login command */
     login_data[0] = strtok(NULL, "\n");
     login_data[1] = strtok(NULL, "\n");
     buffer = build_string("LIN", login_data, 2);
@@ -79,49 +108,49 @@ void login() {
 
     msg_received[7] = '\0';
     msg_received[8] = '\0';
-    udp(buffer, 9, msg_received);
-    strncpy(command, msg_received, 3);
-    command[3] = '\0';
+    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+        return;
+    strncpy(command, msg_received, COMMAND);
+    command[COMMAND] = '\0';
     strncpy(status, msg_received+4, 5);
+
     if(strcmp(command, "RLI") || msg_received[3] != ' ' || msg_received[8] != '\0')
-        printf("%s\n", msg_received); 
+        printf("%s", msg_received); 
     else if(!strcmp(status, "REG\n")){
         printf("new %s registered\n", login_data[0]);
-        strcpy(uid, login_data[0]);
-        strcpy(password, login_data[1]);
-        logged_in = 1;
+        user_login(login_data);
     }
     else if(!strcmp(status, "NOK\n"))
         printf("incorrect login attempt\n");
     else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
         printf("successful login\n");
-        strcpy(uid, login_data[0]);
-        strcpy(password, login_data[1]);
-        logged_in = 1;
+        user_login(login_data);
     }
-    else
-        printf("%s\n", msg_received);
+    else printf("%s", msg_received);
 }
 
 void logout() {
-    char msg_received[9];
+    char msg_received[LOGIN_MSG];
     const char *login_data[2];
     char *buffer;
-    char command[4];
+    char command[COMMAND+1];
     char status[5];
 
+    /* get arguments uid and password from user app global variables */
     login_data[0] = uid;
     login_data[1] = password;
     buffer = build_string("LOU", login_data, 2);
 
     msg_received[7] = '\0';
     msg_received[8] = '\0';
-    udp(buffer, 9, msg_received);
-    strncpy(command, msg_received, 3);
-    command[3] = '\0';
+    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+        return;
+    strncpy(command, msg_received, COMMAND);
+    command[COMMAND] = '\0';
     strncpy(status, msg_received+4, 5);
+
     if(strcmp(command, "RLO") || msg_received[3] != ' ' || msg_received[8] != '\0')
-        printf("%s\n", msg_received); 
+        printf("%s", msg_received); 
     else if(!strcmp(status, "NOK\n"))
         printf("%s not logged in\n", login_data[0]);
     else if(!strcmp(status, "UNR\n"))
@@ -130,29 +159,31 @@ void logout() {
         printf("successful logout\n");
         logged_in = 0;
     }
-    else
-        printf("%s\n", msg_received);
+    else printf("%s", msg_received);
 }
 
 void unregister() {
-    char msg_received[9];
+    char msg_received[LOGIN_MSG];
     const char *login_data[2];
     char *buffer;
-    char command[4];
+    char command[COMMAND+1];
     char status[5];
 
+    /* get arguments uid and password from user app global variables */
     login_data[0] = uid;
     login_data[1] = password;
     buffer = build_string("UNR", login_data, 2);
 
     msg_received[7] = '\0';
     msg_received[8] = '\0';
-    udp(buffer, 9, msg_received);
-    strncpy(command, msg_received, 3);
-    command[3] = '\0';
+    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+        return;
+    strncpy(command, msg_received, COMMAND);
+    command[COMMAND] = '\0';
     strncpy(status, msg_received+4, 5);
+
     if(strcmp(command, "RUR") || msg_received[3] != ' ' || msg_received[8] != '\0')
-        printf("%s\n", msg_received); 
+        printf("%s", msg_received); 
     else if(!strcmp(status, "NOK\n"))
         printf("incorrect unregister attempt\n");
     else if(!strcmp(status, "UNR\n"))
@@ -161,29 +192,33 @@ void unregister() {
         printf("successful unregister\n");
         logged_in = 0;
     }
-    else
-        printf("%s\n", msg_received);
+    else printf("%s", msg_received);
 }
 
 int main(int argc, char **argv) {
     char input_buffer[1024];
+    char *first_word;
     
-    if (argc > 1) 
-        filter_input(argc, argv);
+    filter_input(argc, argv);
 
-    /* uid and password initialized as empty string to make requests without error */
+    /* uid and password initialized as empty string to make requests */
     uid[0] = '\0';
     password[0] = '\0';
 
     while(1) {
-        if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
-            exit(1);
+        /* Get a line from the input terminal */
+        if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL) {
+            printf("ERR: Command '%s' not valid\n", first_word);
+            continue;
+        }
+        /* Replace the spaces for \n to help using strtok function */
         for (size_t i = 0; i < strlen(input_buffer); ++i) {
             if (input_buffer[i] == ' ')
                 input_buffer[i] = '\n';
         }
-        char *first_word = strtok(input_buffer, "\n");
+        first_word = strtok(input_buffer, "\n");
     
+        /* Compare the first word of each input line with a possible command (action) */
         if (!strcmp("login", first_word))
             login();
         else if (!strcmp("logout", first_word))
