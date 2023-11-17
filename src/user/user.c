@@ -28,7 +28,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
     if(fd==-1) {//error
-        printf("Can't connect with the server AS. Try again");
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
@@ -38,14 +38,14 @@ int udp(char *buffer, size_t size, char *msg_received) {
 
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
     if(errcode!=0) {//error
-        printf("Can't connect with the server AS. Try again");
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
     /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) {//error
-        printf("Can't connect with the server AS. Try again");
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
@@ -53,7 +53,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
     /* receive message from AS */
     n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) {//error
-        printf("Can't connect with the server AS. Try again");
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
@@ -61,23 +61,6 @@ int udp(char *buffer, size_t size, char *msg_received) {
     close(fd);
     return 0;
 }
-
-/* struct Login users[12000]; // Assuming a fixed size for simplicity
-
-void insert(int key, const char* value) {
-    for (int i = 0; i < n_users; i++){
-        if (!strcmp(users[key].uid, uid))
-            return;
-    }
-}
-
-int logged_in(const char* uid) {
-    for (int i = 0; i < n_users; i++){
-        if (!strcmp(users[key].uid, uid))
-            return users[key].logged_in;
-    }
-    return -1; //user not registered
-} */
 
 void user_login(const char **login_data) {
     strcpy(uid, login_data[0]);
@@ -93,7 +76,7 @@ void login() {
     char status[5];
 
     if (logged_in) { // only one user can be logged in per user app
-        printf("%s already logged in.\nPlease logout to use another user or login again", uid);
+        printf("%s already logged in. Please logout to use another user or login again\n", uid);
         return;
     }
 
@@ -195,6 +178,10 @@ void unregister() {
     else printf("%s", msg_received);
 }
 
+void list() {}
+
+void show_record() {}
+
 int main(int argc, char **argv) {
     char input_buffer[1024];
     char *first_word;
@@ -227,7 +214,7 @@ int main(int argc, char **argv) {
             unregister();
         else if (!strcmp("exit", first_word)) {
             if (logged_in)
-                printf("Please logout first.\n");
+                printf("Please logout first\n");
             else break;
         }
         else if (!strcmp("open", first_word))
@@ -239,13 +226,13 @@ int main(int argc, char **argv) {
         else if (!strcmp("mybids", first_word) || !strcmp("mb", first_word))
             printf("G\n");
         else if (!strcmp("list", first_word) || !strcmp("l", first_word))
-            printf("H\n");
+            list();
         else if (!strcmp("show_asset", first_word) || !strcmp("sa", first_word))
             printf("I\n");
         else if (!strcmp("bid", first_word) || !strcmp("b", first_word))
             printf("J\n");
         else if (!strcmp("show_record", first_word) || !strcmp("sr", first_word))
-            printf("K\n");
+            show_record();
         else
             printf("ERR: Command '%s' not valid\n", first_word);
     }

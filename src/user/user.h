@@ -4,11 +4,6 @@
 #include "../common/utils.h"
 #include "../common/constant.h"
 
-/* struct Login {
-    char uid[7];
-    int logged_in = 0;
-}; */
-
 /** Verify the parameters from the start of user app, if present -p and -n
  * update ip and port to use, if not present default parameters are used
  */
@@ -28,5 +23,9 @@ void login();
 void logout();
 
 void unregister();
+
+void list();
+
+void show_record();
 
 #endif // __USER_H__
