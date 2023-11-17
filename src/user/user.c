@@ -68,15 +68,26 @@ void user_login(const char **login_data) {
     logged_in = 1;
 }
 
+int get_cmd_status(char *buffer, char *msg, char * cmd, char *status) {
+    memset(msg, '\0', LOGIN_MSG); // initialize the msg with \0 in every index
+    if (udp(buffer, LOGIN_MSG, msg) == -1)
+        return -1;
+    memcpy(cmd, msg, CMD_N_SPACE);
+    cmd[CMD_N_SPACE] = '\0';
+    memcpy(status, msg+CMD_N_SPACE, STATUS);
+    status[STATUS] = '\0';
+    return 0;
+}
+
 void login() {
     char msg_received[LOGIN_MSG];
     const char *login_data[2];
     char *buffer;
     char command[CMD_N_SPACE+1];
-    char status[5];
+    char status[STATUS+1];
 
     if (logged_in) { // only one user can be logged in per user app
-        printf("%s already logged in. Please logout to use another user or login again\n", uid);
+        printf("%s already logged in. Please logout to use another user or to login again\n", uid);
         return;
     }
 
@@ -84,28 +95,23 @@ void login() {
     login_data[0] = strtok(NULL, "\n");
     login_data[1] = strtok(NULL, "\n");
     buffer = build_string("LIN", login_data, 2);
-    if(strlen(login_data[0]) != 6 || strlen(login_data[1]) != 8){
+    if(strlen(login_data[0]) != UID || strlen(login_data[1]) != PASSWORD) {
         printf("incorrect login attempt\n");
         return;
     }
 
-    msg_received[7] = '\0';
-    msg_received[8] = '\0';
-    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+    if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
-    strncpy(command, msg_received, CMD_N_SPACE);
-    command[CMD_N_SPACE] = '\0';
-    strncpy(status, msg_received+4, 5);
 
     if(strcmp(command, "RLI ") || msg_received[8] != '\0')
         printf("%s", msg_received); 
-    else if(!strcmp(status, "REG\n")){
+    else if(!strcmp(status, "REG\n")) {
         printf("new %s registered\n", login_data[0]);
         user_login(login_data);
     }
     else if(!strcmp(status, "NOK\n"))
         printf("incorrect login attempt\n");
-    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful login\n");
         user_login(login_data);
     }
@@ -117,20 +123,15 @@ void logout() {
     const char *login_data[2];
     char *buffer;
     char command[CMD_N_SPACE+1];
-    char status[5];
+    char status[STATUS+1];
 
     /* get arguments uid and password from user app global variables */
     login_data[0] = uid;
     login_data[1] = password;
     buffer = build_string("LOU", login_data, 2);
 
-    msg_received[7] = '\0';
-    msg_received[8] = '\0';
-    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+    if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
-    strncpy(command, msg_received, CMD_N_SPACE);
-    command[CMD_N_SPACE] = '\0';
-    strncpy(status, msg_received+4, 5);
 
     if(strcmp(command, "RLO ") || msg_received[8] != '\0')
         printf("%s", msg_received); 
@@ -138,7 +139,7 @@ void logout() {
         printf("%s not logged in\n", login_data[0]);
     else if(!strcmp(status, "UNR\n"))
         printf("unknown %s\n", login_data[0]);
-    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful logout\n");
         logged_in = 0;
     }
@@ -150,20 +151,15 @@ void unregister() {
     const char *login_data[2];
     char *buffer;
     char command[CMD_N_SPACE+1];
-    char status[5];
+    char status[STATUS+1];
 
     /* get arguments uid and password from user app global variables */
     login_data[0] = uid;
     login_data[1] = password;
     buffer = build_string("UNR", login_data, 2);
 
-    msg_received[7] = '\0';
-    msg_received[8] = '\0';
-    if (udp(buffer, LOGIN_MSG, msg_received) == -1)
+    if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
-    strncpy(command, msg_received, CMD_N_SPACE);
-    command[CMD_N_SPACE] = '\0';
-    strncpy(status, msg_received+4, 5);
 
     if(strcmp(command, "RUR ") || msg_received[8] != '\0')
         printf("%s", msg_received); 
@@ -171,7 +167,7 @@ void unregister() {
         printf("incorrect unregister attempt\n");
     else if(!strcmp(status, "UNR\n"))
         printf("unknown %s\n", login_data[0]);
-    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0'){
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful unregister\n");
         logged_in = 0;
     }
@@ -179,68 +175,77 @@ void unregister() {
 }
 
 int confirm_list(char *msg, char *auction, int i) {
+    /* verify if spaces and \n are correctly placed */
     if (auction[3] != ' ' || (auction[5] != ' ' && auction[5] != '\n') || (auction[5] == '\n' && msg[13 + (i*6)] != '\0'))
         return 1;
+    /* verify if the AID is numeric */
     for (int index = 0; index < 3; index++) {
         if (auction[index] < '0' || auction[index] > '9')
             return 1;
     }
+    /* verify if state is 0 or 1 and if AID is between 001 and 999 (is not 000) */
     return ((auction[4] != '0' && auction[4] != '1') || (auction[0] == '0' && auction[1] == '0' && auction[2] == '0'));
 }
 
-void auction_to_string(char *string, char *auction) {
-    char aux[16]; // 3 digits + " not active\n" + '\0'
+void append_auction(char *string, char *auction) {
+    char aux[LST_PRINT+1]; // 3 digits + " not active\n" (worst case) + '\0'
     
-    snprintf(aux, sizeof(aux), "%.*s", 4, auction); // AID + 1 space
+    memcpy(aux, auction, 4); // AID + 1 space
     if (auction[4] == '0') {
-        snprintf(aux+4, sizeof(aux)-4, "%.*s", 11, "not active\n");
-        aux[15] = '\0';
+        memcpy(aux+4, "not active\n", 11);
+        aux[LST_PRINT] = '\0';
     }
     else if (auction[4] == '1') {
-        snprintf(aux+4, sizeof(aux)-4, "%.*s", 7, "active\n");
+        memcpy(aux+4, "active\n", 7);
         aux[11] = '\0';
     }
     strcpy(string + strlen(string), aux);
+}
+
+int get_list(char *destination, char *msg) {
+    char auction[7];
+    auction[6] = '\0';
+
+    for (int i = 0; i < MAX_AUCTION; i++) {
+        /* get an auction (AID + 1 space + state + (1 space or \n)) from msg */
+        memcpy(auction, msg + 7 + (i*6), 6);
+        if (confirm_list(msg, auction, i)) {
+            printf("%s", msg);
+            return -1;
+        }
+        append_auction(destination, auction);
+        if (auction[5] == '\n') break; // no more auctions
+    }
+    return 0;
 }
 
 void list() {
     char msg_received[LST_MSG+1];
     char *buffer;
     char command[CMD_N_SPACE+1];
-    char status[4];
-    char auction[7];
-    char auctions[LST_MSG+1]; //mudar isto mais tarde
+    char status[STATUS];
+    char auctions[LST_PRINT*MAX_AUCTION+1];
 
     buffer = build_string("LST", NULL, 0);
 
-    for (size_t i = 0; i <= LST_MSG; i++) {
-        msg_received[i] = '\0'; // initialize the string with \0 in every index
-        auctions[i] = '\0';
-    }
+    memset(msg_received, '\0', LST_MSG+1);// initialize the string with \0 in every index
+    memset(auctions, '\0', LST_MSG+1);    // initialize the string with \0 in every index
+
     if (udp(buffer, LST_MSG, msg_received) == -1)
         return;
-    //printf("%s", msg_received);
-
-    snprintf(command, sizeof(command), "%.*s", CMD_N_SPACE, msg_received);
+    memcpy(command, msg_received, CMD_N_SPACE);
     command[CMD_N_SPACE] = '\0';
-    snprintf(status, sizeof(status), "%.*s", 3, msg_received+4);
-    status[3] = '\0';
-    auction[6] = '\0';
-
+    /* for next strcmp calls is needed strlen(status) = 3 */
+    memcpy(status, msg_received+CMD_N_SPACE, STATUS-1);
+    status[STATUS-1] = '\0';
+    
     if(strcmp(command, "RLS "))
         printf("%s", msg_received);
     else if(!strcmp(status, "NOK") && msg_received[7] == '\n' && msg_received[8] == '\0')
         printf("no auction was yet started\n");
-    else if(!strcmp(status, "OK ")){
-        for (int i = 0; i < 999; i++) {
-            snprintf(auction, sizeof(auction), "%.*s", 6, msg_received + 7 + (i*6));
-            if (confirm_list(msg_received,auction,i)) {
-                printf("%s acjaskjc", msg_received);
-                return;
-            }        
-            auction_to_string(auctions, auction);
-            if (auction[5] == '\n') break;
-        }
+    else if(!strcmp(status, "OK ")) {
+        if (get_list(auctions, msg_received) == -1)
+            return;
         printf("%s", auctions);
     }
     else printf("%s", msg_received);
@@ -255,8 +260,8 @@ int main(int argc, char **argv) {
     filter_input(argc, argv);
 
     /* uid and password initialized as empty string to make requests */
-    uid[0] = '\0';
-    password[0] = '\0';
+    memset(uid, '\0', UID+1);
+    memset(password, '\0', PASSWORD+1);
 
     while(1) {
         /* Get a line from the input terminal */
