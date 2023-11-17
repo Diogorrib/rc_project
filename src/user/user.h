@@ -24,6 +24,10 @@ void logout();
 
 void unregister();
 
+int confirm_list(char *msg, char *auction, int i);
+
+void auction_to_string(char *string, char *auction);
+
 void list();
 
 void show_record();
