@@ -66,4 +66,4 @@ clean:
 	rm -f $(OBJECTS) $(TARGETS) $(TARGET_EXECS)
 
 clean-data:
-	rm -rf .txt
+	rm -rf data_dir
