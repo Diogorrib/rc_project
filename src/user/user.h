@@ -52,6 +52,6 @@ int get_list(char *destination, char *msg);
 
 void list();
 
-void show_record();
+void open();
 
 #endif // __USER_H__

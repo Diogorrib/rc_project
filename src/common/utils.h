@@ -16,6 +16,8 @@
 /** Return the concatenation of a first string (command) with the n_strings present in strings array
  * separated by space and with newline character at the end
 */
-char *build_string(const char *command, const char **strings, int n_strings);
+void build_string(char *buffer, const char *command, const char **strings, int n_strings);
+
+char *get_file_info(const char *fname);
 
 #endif // __UTILS_H__
