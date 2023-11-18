@@ -27,20 +27,16 @@ int udp(char *buffer, size_t size, char *msg_received) {
     ssize_t n;
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
-    if(fd==-1) {//error
-        printf("Can't connect with the server AS. Try again\n");
+    if(fd==-1) //error
         return -1;
-    }
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET;//IPv4
     hints.ai_socktype=SOCK_DGRAM;//UDP socket
 
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(errcode!=0) {//error
-        printf("Can't connect with the server AS. Try again\n");
+    if(errcode!=0) //error
         return -1;
-    }
 
     /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
@@ -57,6 +53,54 @@ int udp(char *buffer, size_t size, char *msg_received) {
         return -1;
     }
     
+    freeaddrinfo(res);
+    close(fd);
+    return 0;
+}
+
+int tcp(char *buffer, ssize_t size, char *msg_received) { 
+    struct addrinfo hints,*res;
+    int fd,n;
+    struct sigaction act;
+    ssize_t nleft,nwritten,nread;
+    char *ptr;
+
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+    if (sigaction(SIGPIPE,&act,NULL) == -1)//error
+        return -1;
+
+    fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket
+    if(fd == -1)//error
+        return -1;
+
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET ;//IPv4
+    hints.ai_socktype=SOCK_STREAM;//TCP socket
+
+    n=getaddrinfo(as_ip,as_port,&hints,&res);
+    if(n != 0)//error
+        return -1;
+
+    n=connect(fd,res->ai_addr,res->ai_addrlen);
+    if(n == -1)//error
+        return -1;
+
+    nleft=(ssize_t)strlen(buffer); ptr=buffer;
+    while (nleft>0){nwritten=write(fd,ptr,(size_t)nleft);
+                    if(nwritten <= 0)//error
+                        return -1;
+                    nleft-=nwritten;
+                    ptr+=nwritten;}
+    nleft=size; ptr=msg_received;
+    while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
+                    if(nread == -1)//error
+                        return -1;
+                    else if(nread == 0) break; //closed by peer
+                    nleft-=nread;
+                    ptr+=nread;}
+    nread=size-nleft;
+
     freeaddrinfo(res);
     close(fd);
     return 0;

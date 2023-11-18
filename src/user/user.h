@@ -14,6 +14,11 @@ void filter_input(int argc, char **argv);
 */
 int udp(char *buffer, size_t size, char *msg_received);
 
+/** Send buffer to AS and receive msg_received from AS using TCP,
+ * if return is -1 the connection to AS went wrong
+*/
+int tcp(char *buffer, ssize_t size, char *msg_received);
+
 /** Save the login data (uid and password) and set logged_in to 1
 */
 void user_login(const char **login_data);

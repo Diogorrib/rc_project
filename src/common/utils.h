@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
 
 /** Return the concatenation of a first string (command) with the n_strings present in strings array
  * separated by space and with newline character at the end
