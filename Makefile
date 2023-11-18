@@ -67,3 +67,5 @@ clean:
 
 clean-data:
 	rm -rf data_dir
+
+#valgrind --leak-check=full ./user
