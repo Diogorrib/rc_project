@@ -1,9 +1,10 @@
+#include "parse_user.h"
 #include "user.h"
 
 char *as_ip = DEFAULT_IP;
 char *as_port = DEFAULT_PORT;
-char uid[UID+1];
-char password[PASSWORD+1];
+char uid[UID+1], password[PASSWORD+1];
+char input_buffer[1024];
 int logged_in = 0;  // if logged in 1, if not logged in 0
 
 void filter_input(int argc, char **argv) {
@@ -60,9 +61,9 @@ int udp(char *buffer, size_t size, char *msg_received) {
 
 int tcp(char *buffer, ssize_t size, char *msg_received) { 
     struct addrinfo hints,*res;
-    int fd,n;
     struct sigaction act;
     ssize_t nleft,nwritten,nread;
+    int fd,n;
     char *ptr;
 
     memset(&act,0,sizeof act);
@@ -87,19 +88,17 @@ int tcp(char *buffer, ssize_t size, char *msg_received) {
         return -1;
 
     nleft=(ssize_t)strlen(buffer); ptr=buffer;
+    /* send message to AS */
     while (nleft>0){nwritten=write(fd,ptr,512);
-                    if(nwritten <= 0)//error
-                        return -1;
-                    nleft-=nwritten;
-                    ptr+=nwritten;}
+                    if(nwritten <= 0) return -1; //error
+                    nleft-=nwritten; ptr+=nwritten;}
     nleft=size; ptr=msg_received;
+    /* receive message from AS */
     printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
     while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
-                    if(nread == -1)//error
-                        return -1;
+                    if(nread == -1) return -1; //error
                     else if(nread == 0) break; //closed by peer
-                    nleft-=nread;
-                    ptr+=nread;}
+                    nleft-=nread; ptr+=nread;}
     nread=size-nleft;
     printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
 
@@ -108,15 +107,15 @@ int tcp(char *buffer, ssize_t size, char *msg_received) {
     return 0;
 }
 
-void user_login(const char **login_data) {
-    strcpy(uid, login_data[0]);
-    strcpy(password, login_data[1]);
+void user_login(const char *aux_uid, const char *aux_pass) {
+    strcpy(uid, aux_uid);
+    strcpy(password, aux_pass);
     logged_in = 1;
 }
 
 int get_cmd_status(char *buffer, char *msg, char * cmd, char *status) {
-    memset(msg, '\0', LOGIN_MSG); // initialize the msg with \0 in every index
-    if (udp(buffer, LOGIN_MSG, msg) == -1)
+    memset(msg, '\0', LOGIN_RCV); // initialize the msg with \0 in every index
+    if (udp(buffer, LOGIN_RCV, msg) == -1)
         return -1;
     memcpy(cmd, msg, CMD_N_SPACE);
     cmd[CMD_N_SPACE] = '\0';
@@ -126,27 +125,22 @@ int get_cmd_status(char *buffer, char *msg, char * cmd, char *status) {
 }
 
 void login() {
-    char msg_received[LOGIN_MSG];
-    const char *login_data[2];
-    char buffer[CMD_N_SPACE+UID+PASSWORD+3];
-    char command[CMD_N_SPACE+1];
-    char status[STATUS+1];
+    char buffer[LOGIN_SND];
+    char msg_received[LOGIN_RCV];
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    char aux_uid[UID+1], aux_pass[PASSWORD+1];
 
-    /* read arguments uid and password from the login command */
-    login_data[0] = strtok(NULL, "\n");
-    login_data[1] = strtok(NULL, "\n");
+    if (confirm_login_input(input_buffer, aux_uid, aux_pass) == -1)
+        return;
 
     if (logged_in) { // only one user can be logged in per user app
         printf("%s already logged in. Please logout to use another user or to login again\n", uid);
         return;
     }
 
-    memset(buffer, '\0', CMD_N_SPACE+UID+PASSWORD+3); // initialize the buffer with \0 in every index
-    build_string(buffer, "LIN", login_data, 2);
-    if(strlen(login_data[0]) != UID || strlen(login_data[1]) != PASSWORD) {
-        printf("incorrect login attempt\n");
-        return;
-    }
+    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s\n", "LIN", aux_uid, aux_pass);
 
     if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
@@ -154,30 +148,29 @@ void login() {
     if(strcmp(command, "RLI ") || msg_received[8] != '\0')
         printf("%s", msg_received); 
     else if(!strcmp(status, "REG\n")) {
-        printf("new %s registered\n", login_data[0]);
-        user_login(login_data);
+        printf("new %s registered\n", aux_uid);
+        user_login(aux_uid, aux_pass);
     }
     else if(!strcmp(status, "NOK\n"))
         printf("incorrect login attempt\n");
     else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful login\n");
-        user_login(login_data);
+        user_login(aux_uid, aux_pass);
     }
     else printf("%s", msg_received);
 }
 
 void logout() {
-    char msg_received[LOGIN_MSG];
-    const char *login_data[2];
-    char buffer[CMD_N_SPACE+UID+PASSWORD+3];
-    char command[CMD_N_SPACE+1];
-    char status[STATUS+1];
+    char buffer[LOGIN_SND];
+    char msg_received[LOGIN_RCV];
+    char command[CMD_N_SPACE+1], status[STATUS+1];
 
-    /* get arguments uid and password from user app global variables */
-    login_data[0] = uid;
-    login_data[1] = password;
-    memset(buffer, '\0', CMD_N_SPACE+UID+PASSWORD+3); // initialize the buffer with \0 in every index
-    build_string(buffer, "LOU", login_data, 2);
+    if (confirm_only_cmd_input(input_buffer, "logout") == -1)
+        return;
+    
+    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s\n", "LOU", uid, password);
 
     if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
@@ -185,9 +178,9 @@ void logout() {
     if(strcmp(command, "RLO ") || msg_received[8] != '\0')
         printf("%s", msg_received); 
     else if(!strcmp(status, "NOK\n"))
-        printf("%s not logged in\n", login_data[0]);
+        printf("%s not logged in\n", uid);
     else if(!strcmp(status, "UNR\n"))
-        printf("unknown %s\n", login_data[0]);
+        printf("unknown %s\n", uid);
     else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful logout\n");
         logged_in = 0;
@@ -196,17 +189,16 @@ void logout() {
 }
 
 void unregister() {
-    char msg_received[LOGIN_MSG];
-    const char *login_data[2];
-    char buffer[CMD_N_SPACE+UID+PASSWORD+3];
-    char command[CMD_N_SPACE+1];
-    char status[STATUS+1];
+    char buffer[LOGIN_SND];
+    char msg_received[LOGIN_RCV];
+    char command[CMD_N_SPACE+1], status[STATUS+1];
 
-    /* get arguments uid and password from user app global variables */
-    login_data[0] = uid;
-    login_data[1] = password;
-    memset(buffer, '\0', CMD_N_SPACE+UID+PASSWORD+3); // initialize the buffer with \0 in every index
-    build_string(buffer, "UNR", login_data, 2);
+    if (confirm_only_cmd_input(input_buffer, "unregister") == -1)
+        return;
+
+    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s\n", "UNR", uid, password);
 
     if (get_cmd_status(buffer, msg_received, command, status) == -1)
         return;
@@ -216,7 +208,7 @@ void unregister() {
     else if(!strcmp(status, "NOK\n"))
         printf("incorrect unregister attempt\n");
     else if(!strcmp(status, "UNR\n"))
-        printf("unknown %s\n", login_data[0]);
+        printf("unknown %s\n", uid);
     else if(!strcmp(status, "OK\n") && msg_received[7] == '\0') {
         printf("successful unregister\n");
         logged_in = 0;
@@ -269,20 +261,23 @@ int get_list(char *destination, char *msg) {
     return 0;
 }
 
-void list() {
-    char msg_received[LST_MSG+1];
+void list(char *first_word) {
+    char msg_received[LST_RCV+1];
     char buffer[CMD_N_SPACE+1];
-    char command[CMD_N_SPACE+1];
-    char status[STATUS];
+    char command[CMD_N_SPACE+1], status[STATUS];
     char auctions[LST_PRINT*MAX_AUCTION+1];
 
+    if (confirm_only_cmd_input(input_buffer, first_word) == -1)
+        return;
+
     memset(buffer, '\0', CMD_N_SPACE+1); // initialize the buffer with \0 in every index
-    build_string(buffer, "LST", NULL, 0);
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s\n", "LST");
+    
+    memset(msg_received, '\0', LST_RCV+1);  // initialize the string with \0 in every index
+    memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);    // initialize the string with \0 in every index
 
-    memset(msg_received, '\0', LST_MSG+1);// initialize the string with \0 in every index
-    memset(auctions, '\0', LST_MSG+1);    // initialize the string with \0 in every index
-
-    if (udp(buffer, LST_MSG, msg_received) == -1)
+    if (udp(buffer, LST_RCV, msg_received) == -1)
         return;
     memcpy(command, msg_received, CMD_N_SPACE);
     command[CMD_N_SPACE] = '\0';
@@ -307,52 +302,40 @@ int confirm_open(char *msg) {
     if (msg[10] != '\n' || msg[11] != '\0')
         return 0;
     for (int i = initial; i < initial+3; i++) {
-        if (msg[i] < '0' || msg[i] > '9')
+        if (!isdigit(msg[i]))
             return 0;
     }
     return !(msg[initial] == '0' && msg[initial+1] == '0' && msg[initial+2] == '0');
 }
 
 void open() {
-    char msg_received[CMD_N_SPACE+STATUS+3+2]; // AID + '\n' + '\0'
-    const char *open_data[5];
-    char aux_buffer[CMD_N_SPACE+10+6+4+5]; //name + start value + time in min + spaces
-    char command[CMD_N_SPACE+1];
-    char status[STATUS+1];
-    char aid[5];
-    char *fname;
-    char *buffer;
-    char *aux;
+    char msg_received[OPEN_RCV]; // AID + '\n' + '\0'
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    char aid[AID+2], name[NAME+1];
+    int start_value, timeactive;
+    char *fname,*fdata,*buffer;
+    long fsize;
 
-    /* get arguments uid and password from user app global variables */
-    open_data[0] = uid;
-    open_data[1] = password;
-    /* read arguments name, asset_fname, start_value and timeactive from the open command */
-    open_data[2] = strtok(NULL, "\n");
-    fname = strtok(NULL, "\n");
-    open_data[3] = strtok(NULL, "\n");
-    open_data[4] = strtok(NULL, "\n");
-
-    memset(msg_received, '\0', CMD_N_SPACE+STATUS+3+2);
-    memset(aux_buffer, '\0', CMD_N_SPACE+10+6+4+5); // initialize the aux_buffer with \0 in every index
-    build_string(aux_buffer, "OPA", open_data, 5);
-    /* if(strlen(open_data[0]) != UID || strlen(open_data[1]) != PASSWORD) {
-        printf("incorrect login attempt\n");
+    fname = confirm_open_input(input_buffer, name, &start_value, &timeactive);
+    if (fname == NULL)
         return;
-    } */
-    aux = get_file_info(fname);
-    size_t buffer_size = strlen(aux_buffer)+strlen(fname)+strlen(aux)+1;
+
+    fdata = get_file_info(fname, &fsize);
+    if (fdata == NULL)
+        return;
+    size_t buffer_size = OPEN_SND+strlen(fname)+strlen(fdata);
     buffer = (char*)malloc(buffer_size);
+    memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
     memset(buffer, '\0', buffer_size); // initialize the buffer with \0 in every index
-    aux_buffer[strlen(aux_buffer)-1] = ' ';
-    strcat(buffer, aux_buffer);
-    strcat(buffer, aux);
-    free(aux);
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s %s %d %d %s %ld %s\n",
+            "UNR", uid, password, name, start_value, timeactive, fname, fsize, fdata);
+    free(fdata);
+    free(fname);
 
     printf("%s\n", buffer);
 
-    tcp(buffer, CMD_N_SPACE+STATUS+3+2, msg_received);
-
+    tcp(buffer, OPEN_RCV, msg_received);
     free(buffer);
 
     printf("%s", msg_received);
@@ -370,7 +353,7 @@ void open() {
     else if(!strcmp(status, "NLG") && msg_received[7] == '\n' && msg_received[8] == '\0')
         printf("login is needed to open an auction\n");
     else if(!strcmp(status, "OK ") && confirm_open(msg_received)) {
-        memcpy(aid, msg_received+CMD_N_SPACE+STATUS-1, 4);
+        memcpy(aid, msg_received+CMD_N_SPACE+STATUS-1, AID+1);
         aid[4] = '\0';
         printf("auction started successfully with the identifier %s", aid);
     }
@@ -378,27 +361,22 @@ void open() {
 }
 
 int main(int argc, char **argv) {
-    char input_buffer[1024];
-    char *first_word;
+    char first_word[32];
     
     filter_input(argc, argv);
 
     /* uid and password initialized as empty string to make requests */
     memset(uid, '\0', UID+1);
     memset(password, '\0', PASSWORD+1);
+    memset(first_word, '\0', 32);
 
     while(1) {
         /* Get a line from the input terminal */
         if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL) {
-            printf("ERR: Command '%s' not valid\n", first_word);
+            printf("ERR: Command not valid\n");
             continue;
         }
-        /* Replace the spaces for \n to help using strtok function */
-        for (size_t i = 0; i < strlen(input_buffer); ++i) {
-            if (input_buffer[i] == ' ')
-                input_buffer[i] = '\n';
-        }
-        first_word = strtok(input_buffer, "\n");
+        sscanf(input_buffer, "%31s", first_word);
     
         /* Compare the first word of each input line with a possible command (action) */
         if (!strcmp("login", first_word))
@@ -408,6 +386,8 @@ int main(int argc, char **argv) {
         else if (!strcmp("unregister", first_word))
             unregister();
         else if (!strcmp("exit", first_word)) {
+            if (confirm_only_cmd_input(input_buffer, "exit") == -1)
+                continue;
             if (logged_in)
                 printf("Please logout first\n");
             else break;
@@ -421,7 +401,7 @@ int main(int argc, char **argv) {
         else if (!strcmp("mybids", first_word) || !strcmp("mb", first_word))
             printf("G\n");
         else if (!strcmp("list", first_word) || !strcmp("l", first_word))
-            list();
+            list(first_word);
         else if (!strcmp("show_asset", first_word) || !strcmp("sa", first_word))
             printf("I\n");
         else if (!strcmp("bid", first_word) || !strcmp("b", first_word))

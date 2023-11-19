@@ -12,12 +12,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
+#include <ctype.h>
 
-/** Return the concatenation of a first string (command) with the n_strings present in strings array
- * separated by space and with newline character at the end
-*/
-void build_string(char *buffer, const char *command, const char **strings, int n_strings);
+char *get_file_info(const char *fname, long *fsize);
 
-char *get_file_info(const char *fname);
+int is_numeric(char *buffer);
+int is_alphanumeric(char *buffer);
 
 #endif // __UTILS_H__

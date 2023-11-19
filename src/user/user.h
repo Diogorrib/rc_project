@@ -1,8 +1,8 @@
 #ifndef __USER_H__
 #define __USER_H__
 
-#include "../common/utils.h"
 #include "../common/constant.h"
+#include "../common/utils.h"
 
 /** Verify the parameters from the start of User app, if present -p and -n
  * update IP and PORT to use, if not present default parameters are used
@@ -21,7 +21,7 @@ int tcp(char *buffer, ssize_t size, char *msg_received);
 
 /** Save the login data (uid and password) and set logged_in to 1
 */
-void user_login(const char **login_data);
+void user_login(const char *aux_uid, const char *aux_pass);
 
 /** Use udp function to receive a message with LOGIN_MSG char
  * and get from that message the command and status
@@ -50,7 +50,7 @@ void append_auction(char *string, char *auction);
 */
 int get_list(char *destination, char *msg);
 
-void list();
+void list(char *first_word);
 
 void open();
 
