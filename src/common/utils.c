@@ -28,6 +28,7 @@ char *get_file_info(const char *fname, long *fsize) {
         fclose(file);
         return NULL;
     }
+
     fclose(file);
     return fdata;
 }

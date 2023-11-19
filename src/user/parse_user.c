@@ -48,14 +48,58 @@ char *confirm_open_input(char *buffer, char *name, int *start_value, int *timeac
     char *fname;
     size_t cmd_size = strlen("open ");
     size_t fname_size = strlen(buffer)-cmd_size+1; //worst case all input except cmd is the same string
-    (void)start_value;
-    (void)timeactive;
-    (void)cmd_size;
+    size_t offset;
+    char aux[11];
+    
 
     fname = (char *)malloc(fname_size);
     memset(name, '\0', NAME+1); // initialize the name with \0 in every index
     memset(fname, '\0', fname_size); // initialize the fname with \0 in every index
 
-    // TODO
-    return NULL;
+    sscanf(buffer+cmd_size, "%10s", name);
+    if(strlen(name) > NAME || !is_alphanumeric(name) ||
+        buffer[strlen(name)+cmd_size] != ' ' || buffer[strlen(name)+cmd_size+1] == ' ') {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    offset = cmd_size+strlen(name)+1;
+    sscanf(buffer+offset, "%s", fname);
+    fname_size = strlen(fname);
+    if(buffer[offset+fname_size] != ' ' || buffer[offset+fname_size+1] == ' ' || buffer[offset+fname_size+1] == '-') {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    offset += fname_size+1;
+    if (sscanf(buffer+offset, "%d", start_value) != 1) {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    sprintf(aux, "%d", *start_value);
+    if(buffer[offset+strlen(aux)] != ' ' || buffer[offset+strlen(aux)+1] == ' ' || buffer[offset+strlen(aux)+1] == '-') {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    offset += strlen(aux)+1;
+    if (sscanf(buffer+offset, "%d", timeactive) != 1) {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    sprintf(aux, "%d", *timeactive);
+    if(buffer[offset+strlen(aux)] != '\n' || buffer[offset+strlen(aux)+1] != '\0') {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+    if (*start_value > 999999 || *timeactive > 99999) {
+        printf("incorrect open attempt\n");
+        free(fname);
+        return NULL;
+    }
+
+    return fname;
 }

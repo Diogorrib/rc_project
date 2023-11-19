@@ -63,6 +63,7 @@ int tcp(char *buffer, ssize_t size, char *msg_received) {
     struct addrinfo hints,*res;
     struct sigaction act;
     ssize_t nleft,nwritten,nread;
+    size_t block;
     int fd,n;
     char *ptr;
 
@@ -87,15 +88,17 @@ int tcp(char *buffer, ssize_t size, char *msg_received) {
     if(n == -1)//error
         return -1;
 
-    nleft=(ssize_t)strlen(buffer); ptr=buffer;
+    nleft=(ssize_t)strlen(buffer); ptr=buffer; block = 512;
     /* send message to AS */
-    while (nleft>0){nwritten=write(fd,ptr,512);
+    while (nleft>0){if(block > nleft) block=(size_t)nleft;
+                    nwritten=write(fd,ptr,block);
                     if(nwritten <= 0) return -1; //error
                     nleft-=nwritten; ptr+=nwritten;}
-    nleft=size; ptr=msg_received;
+    nleft=size; ptr=msg_received; block = 512;
     /* receive message from AS */
     printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
+    while (nleft>0){if(block > nleft) block=(size_t)nleft;
+                    nread=read(fd,ptr,512);
                     if(nread == -1) return -1; //error
                     else if(nread == 0) break; //closed by peer
                     nleft-=nread; ptr+=nread;}
@@ -310,39 +313,48 @@ int confirm_open(char *msg) {
 
 void open() {
     char msg_received[OPEN_RCV]; // AID + '\n' + '\0'
-    char command[CMD_N_SPACE+1], status[STATUS+1];
+    //char command[CMD_N_SPACE+1], status[STATUS+1];
     char aid[AID+2], name[NAME+1];
     int start_value, timeactive;
     char *fname,*fdata,*buffer;
     long fsize;
+    (void)aid;
 
     fname = confirm_open_input(input_buffer, name, &start_value, &timeactive);
     if (fname == NULL)
         return;
 
     fdata = get_file_info(fname, &fsize);
-    if (fdata == NULL)
+    if (fdata == NULL) {
+        free(fname);
         return;
+    }
     size_t buffer_size = OPEN_SND+strlen(fname)+strlen(fdata);
     buffer = (char*)malloc(buffer_size);
     memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
     memset(buffer, '\0', buffer_size); // initialize the buffer with \0 in every index
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %d %d %s %ld %s\n",
-            "UNR", uid, password, name, start_value, timeactive, fname, fsize, fdata);
+            "OPA", uid, password, name, start_value, timeactive, fname, fsize, fdata);
     free(fdata);
     free(fname);
+    long i=0;
+    while(i < buffer_size) {
+        printf("%c", buffer[i]);
+        i++;
+    }
 
-    printf("%s\n", buffer);
-
-    tcp(buffer, OPEN_RCV, msg_received);
-    free(buffer);
+    /* if (tcp(buffer, OPEN_RCV, msg_received) == -1) {
+        free(buffer);
+        printf("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n");
+        return;        
+    }
 
     printf("%s", msg_received);
 
     memcpy(command, msg_received, CMD_N_SPACE);
     command[CMD_N_SPACE] = '\0';
-    /* for next strcmp calls is needed strlen(status) = 3 */
+    // for next strcmp calls is needed strlen(status) = 3 
     memcpy(status, msg_received+CMD_N_SPACE, STATUS-1);
     status[STATUS-1] = '\0';
 
@@ -357,7 +369,7 @@ void open() {
         aid[4] = '\0';
         printf("auction started successfully with the identifier %s", aid);
     }
-    else printf("%s", msg_received);
+    else printf("%s", msg_received); */
 }
 
 int main(int argc, char **argv) {
