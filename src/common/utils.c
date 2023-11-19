@@ -1,10 +1,10 @@
 #include "utils.h"
 
-char *get_file_info(const char *fname, long *fsize) {
+int get_file_size(const char *fname, long *fsize) {
     FILE *file = fopen(fname, "rb");
     if (file == NULL) {
         printf("Error opening file\n");
-        return NULL;
+        return -1;
     }
 
     /* Get file size */
@@ -12,25 +12,29 @@ char *get_file_info(const char *fname, long *fsize) {
     *fsize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    /* Allocate memory for file data */
-    char *fdata = (char *)malloc((size_t)*fsize);
-    if (fdata == NULL) {
-        printf("Error allocating memory\n");
-        fclose(file);
-        return NULL;
+    fclose(file);
+    return 0;
+}
+
+int send_image(int fd, char *fname) {
+    char buffer[512];
+
+    /* Open file for reading */
+    FILE *file = fopen(fname, "rb");
+    if (file == NULL) {
+        printf("Error opening file %s for reading\n", fname);
+        close(fd);
+        return -1;
     }
 
-    /* Read file data */
-    size_t bytesRead = fread(fdata, 1, (size_t)*fsize, file);
-    if (bytesRead != *fsize) {
-        printf("Error reading file\n");
-        free(fdata);
-        fclose(file);
-        return NULL;
+    /* Send file data */
+    size_t bytesRead;
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        send(fd, buffer, bytesRead, 0);
     }
 
     fclose(file);
-    return fdata;
+    return 0;
 }
 
 int is_numeric(char *buffer) {

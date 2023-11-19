@@ -13,7 +13,7 @@
 #define MAX_AUCTION 999 // max possible auctions
 
 #define LOGIN_SND (CMD_N_SPACE+UID+PASSWORD+3) // size of message sent to AS including the '\0'
-#define OPEN_SND (CMD_N_SPACE+UID+PASSWORD+NAME+6+6+8) // size of a part of the message sent to AS including the '\0' (6 is the max digits of some numbers)
+#define OPEN_SND (CMD_N_SPACE+UID+PASSWORD+NAME+6+6+19+8) // size of a part of the message sent to AS including the '\0' (6 is the max digits of some numbers and 19 is the max digits of a long int)
 
 #define LOGIN_RCV (CMD_N_SPACE+STATUS+1)    // size of message received including the '\0'
 #define LST_RCV (7 + MAX_AUCTION * (AID+3)) // 7 initial chars plus MAX * (AID + 1 char(state) and 2 spaces)

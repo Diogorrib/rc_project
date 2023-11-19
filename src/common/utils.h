@@ -14,9 +14,22 @@
 #include <signal.h>
 #include <ctype.h>
 
-char *get_file_info(const char *fname, long *fsize);
+/** Get the size of the file, if return is -1 it is possible that fname is not
+ * the name of a file or this file does not exist
+ */
+int get_file_size(const char *fname, long *fsize);
 
+/** Open and read a file and send it using tcp,
+ * return is -1 in case of error
+ */
+int send_image(int fd, char *fname);
+
+/** Verify if the buffer is only digits
+ */
 int is_numeric(char *buffer);
+
+/** Verify if the buffer is only digits and letters
+ */
 int is_alphanumeric(char *buffer);
 
 #endif // __UTILS_H__

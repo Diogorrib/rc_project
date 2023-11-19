@@ -28,16 +28,20 @@ int udp(char *buffer, size_t size, char *msg_received) {
     ssize_t n;
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
-    if(fd==-1) //error
+    if(fd==-1) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET;//IPv4
     hints.ai_socktype=SOCK_DGRAM;//UDP socket
 
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(errcode!=0) //error
+    if(errcode!=0) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
     /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
@@ -59,55 +63,73 @@ int udp(char *buffer, size_t size, char *msg_received) {
     return 0;
 }
 
-int tcp(char *buffer, ssize_t size, char *msg_received) { 
+int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) { 
     struct addrinfo hints,*res;
     struct sigaction act;
     ssize_t nleft,nwritten,nread;
-    size_t block;
     int fd,n;
     char *ptr;
 
     memset(&act,0,sizeof act);
     act.sa_handler=SIG_IGN;
-    if (sigaction(SIGPIPE,&act,NULL) == -1)//error
+    if (sigaction(SIGPIPE,&act,NULL) == -1) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
     fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket
-    if(fd == -1)//error
+    if(fd == -1) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
     memset(&hints,0,sizeof hints);
     hints.ai_family=AF_INET ;//IPv4
     hints.ai_socktype=SOCK_STREAM;//TCP socket
 
     n=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(n != 0)//error
+    if(n != 0) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
     n=connect(fd,res->ai_addr,res->ai_addrlen);
-    if(n == -1)//error
+    if(n == -1) {//error
+        printf("Can't connect with the server AS. Try again\n");
         return -1;
+    }
 
-    nleft=(ssize_t)strlen(buffer); ptr=buffer; block = 512;
-    /* send message to AS */
-    while (nleft>0){if(block > nleft) block=(size_t)nleft;
-                    nwritten=write(fd,ptr,block);
-                    if(nwritten <= 0) return -1; //error
-                    nleft-=nwritten; ptr+=nwritten;}
-    nleft=size; ptr=msg_received; block = 512;
+    nleft=(ssize_t)strlen(msg_sent); ptr=msg_sent;
+    /* send message to AS not inclunding the \n */
+    while (nleft>0){nwritten=write(fd,ptr,(size_t)nleft);
+                    if(nwritten <= 0){//error
+                        printf("Can't connect with the server AS. Try again\n");
+                        return -1;}
+                    nleft-=nwritten; ptr+=nwritten;}                  
+    if (fname != NULL) {
+        if (send_image(fd, fname) == -1)
+            return -1;
+    }
+    ptr = "\n"; /* send \n to AS */
+    nwritten=write(fd,ptr,1);
+    if(nwritten <= 0) {//error
+        printf("Can't connect with the server AS. Try again\n");
+        return -1;
+    }
+    
+    nleft=size; ptr=msg_received;
     /* receive message from AS */
-    printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    while (nleft>0){if(block > nleft) block=(size_t)nleft;
-                    nread=read(fd,ptr,512);
-                    if(nread == -1) return -1; //error
+    while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
+                    if(nread == -1){//error
+                        printf("Can't connect with the server AS. Try again\n");
+                        return -1;}
                     else if(nread == 0) break; //closed by peer
                     nleft-=nread; ptr+=nread;}
     nread=size-nleft;
-    printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
 
     freeaddrinfo(res);
     close(fd);
-    return 0;
+    return 0;    
 }
 
 void user_login(const char *aux_uid, const char *aux_pass) {
@@ -219,29 +241,16 @@ void unregister() {
     else printf("%s", msg_received);
 }
 
-int confirm_list(char *msg, char *auction, int i) {
-    /* verify if spaces and \n are correctly placed */
-    if (auction[3] != ' ' || (auction[5] != ' ' && auction[5] != '\n') || (auction[5] == '\n' && msg[13 + (i*6)] != '\0'))
-        return 1;
-    /* verify if the AID is numeric */
-    for (int index = 0; index < 3; index++) {
-        if (auction[index] < '0' || auction[index] > '9')
-            return 1;
-    }
-    /* verify if state is 0 or 1 and if AID is between 001 and 999 (is not 000) */
-    return ((auction[4] != '0' && auction[4] != '1') || (auction[0] == '0' && auction[1] == '0' && auction[2] == '0'));
-}
-
 void append_auction(char *string, char *auction) {
     char aux[LST_PRINT+1]; // 3 digits + " not active\n" (worst case) + '\0'
     
-    memcpy(aux, auction, 4); // AID + 1 space
-    if (auction[4] == '0') {
-        memcpy(aux+4, "not active\n", 11);
+    memcpy(aux, auction, AID+1); // AID + 1 space
+    if (auction[AID+1] == '0') {
+        memcpy(aux+AID+1, "not active\n", 11);
         aux[LST_PRINT] = '\0';
     }
-    else if (auction[4] == '1') {
-        memcpy(aux+4, "active\n", 7);
+    else if (auction[AID+1] == '1') {
+        memcpy(aux+AID+1, "active\n", 7);
         aux[11] = '\0';
     }
     strcpy(string + strlen(string), aux);
@@ -267,21 +276,22 @@ int get_list(char *destination, char *msg) {
 void list(char *first_word) {
     char msg_received[LST_RCV+1];
     char buffer[CMD_N_SPACE+1];
-    char command[CMD_N_SPACE+1], status[STATUS];
     char auctions[LST_PRINT*MAX_AUCTION+1];
+    char command[CMD_N_SPACE+1], status[STATUS];
 
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
-    memset(buffer, '\0', CMD_N_SPACE+1); // initialize the buffer with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', CMD_N_SPACE+1);
+    memset(msg_received, '\0', LST_RCV+1);
+    memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s\n", "LST");
-    
-    memset(msg_received, '\0', LST_RCV+1);  // initialize the string with \0 in every index
-    memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);    // initialize the string with \0 in every index
-
     if (udp(buffer, LST_RCV, msg_received) == -1)
         return;
+
     memcpy(command, msg_received, CMD_N_SPACE);
     command[CMD_N_SPACE] = '\0';
     /* for next strcmp calls is needed strlen(status) = 3 */
@@ -300,57 +310,35 @@ void list(char *first_word) {
     else printf("%s", msg_received);
 }
 
-int confirm_open(char *msg) {
-    int initial = CMD_N_SPACE+STATUS-1;
-    if (msg[10] != '\n' || msg[11] != '\0')
-        return 0;
-    for (int i = initial; i < initial+3; i++) {
-        if (!isdigit(msg[i]))
-            return 0;
-    }
-    return !(msg[initial] == '0' && msg[initial+1] == '0' && msg[initial+2] == '0');
-}
-
 void open() {
     char msg_received[OPEN_RCV]; // AID + '\n' + '\0'
-    //char command[CMD_N_SPACE+1], status[STATUS+1];
+    char command[CMD_N_SPACE+1], status[STATUS+1];
     char aid[AID+2], name[NAME+1];
     int start_value, timeactive;
-    char *fname,*fdata,*buffer;
+    char *fname,*buffer;
     long fsize;
-    (void)aid;
 
     fname = confirm_open_input(input_buffer, name, &start_value, &timeactive);
     if (fname == NULL)
         return;
 
-    fdata = get_file_info(fname, &fsize);
-    if (fdata == NULL) {
+    if (get_file_size(fname, &fsize) == -1) {
         free(fname);
         return;
     }
-    size_t buffer_size = OPEN_SND+strlen(fname)+strlen(fdata);
+    size_t buffer_size = OPEN_SND+strlen(fname);
     buffer = (char*)malloc(buffer_size);
     memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
     memset(buffer, '\0', buffer_size); // initialize the buffer with \0 in every index
     /* Create the message to send to AS */
-    sprintf(buffer, "%s %s %s %s %d %d %s %ld %s\n",
-            "OPA", uid, password, name, start_value, timeactive, fname, fsize, fdata);
-    free(fdata);
-    free(fname);
-    long i=0;
-    while(i < buffer_size) {
-        printf("%c", buffer[i]);
-        i++;
-    }
+    sprintf(buffer, "%s %s %s %s %d %d %s %ld ",
+            "OPA", uid, password, name, start_value, timeactive, fname, fsize);
 
-    /* if (tcp(buffer, OPEN_RCV, msg_received) == -1) {
-        free(buffer);
-        printf("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n");
-        return;        
+    if (tcp(buffer, fname, OPEN_RCV, msg_received) == -1) {
+        free(buffer); free(fname);
+        return;
     }
-
-    printf("%s", msg_received);
+    free(buffer); free(fname);
 
     memcpy(command, msg_received, CMD_N_SPACE);
     command[CMD_N_SPACE] = '\0';
@@ -365,11 +353,11 @@ void open() {
     else if(!strcmp(status, "NLG") && msg_received[7] == '\n' && msg_received[8] == '\0')
         printf("login is needed to open an auction\n");
     else if(!strcmp(status, "OK ") && confirm_open(msg_received)) {
-        memcpy(aid, msg_received+CMD_N_SPACE+STATUS-1, AID+1);
+        memcpy(aid, msg_received+CMD_N_SPACE+STATUS-1, AID+1);  // AID including \n
         aid[4] = '\0';
         printf("auction started successfully with the identifier %s", aid);
     }
-    else printf("%s", msg_received); */
+    else printf("%s", msg_received);
 }
 
 int main(int argc, char **argv) {
