@@ -109,33 +109,6 @@ char *confirm_open_input(char *buffer, char *name, int *start_value, int *timeac
     return fname;
 }
 
-int confirm_list(char *msg, char *auction, int index) {
-    /* verify if spaces and \n are correctly placed */
-    if (auction[3] != ' ' || (auction[5] != ' ' && auction[5] != '\n') || (auction[5] == '\n' && msg[13 + (index*6)] != '\0'))
-        return 1;
-    /* verify if the AID is numeric */
-    for (int i = 0; i < 3; i++) {
-        if (!isdigit(auction[i]))
-            return 1;
-    }
-    /* verify if state is 0 or 1 and if AID is between 001 and 999 (is not 000) */
-    return ((auction[4] != '0' && auction[4] != '1') || (auction[0] == '0' && auction[1] == '0' && auction[2] == '0'));
-}
-
-int confirm_open(char *msg) {
-    int initial = CMD_N_SPACE+STATUS-1;
-    /* verify if the last characters are placed correctly */
-    if (msg[10] != '\n' || msg[11] != '\0')
-        return 0;
-    /* verify if the AID is numeric */
-    for (int i = initial; i < initial+3; i++) {
-        if (!isdigit(msg[i]))
-            return 0;
-    }
-    /* verify if AID is between 001 and 999 (is not 000) */
-    return !(msg[initial] == '0' && msg[initial+1] == '0' && msg[initial+2] == '0');
-}
-
 int confirm_close_input(char *buffer, char *aid) {
     size_t cmd_size = strlen("close ");
 
