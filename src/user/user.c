@@ -105,9 +105,10 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
                     if(nwritten <= 0){//error
                         printf("Can't connect with the server AS. Try again\n");
                         return -1;}
-                    nleft-=nwritten; ptr+=nwritten;}                  
+                    nleft-=nwritten; ptr+=nwritten;}  
+
     if (fname != NULL) {
-        if (send_image(fd, fname) == -1)
+        if (send_file(fd, fname) == -1)
             return -1;
     }
     ptr = "\n"; /* send \n to AS */
@@ -116,7 +117,6 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
         printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
-    
     nleft=size; ptr=msg_received;
     /* receive message from AS */
     while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
@@ -126,7 +126,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
                     else if(nread == 0) break; //closed by peer
                     nleft-=nread; ptr+=nread;}
     nread=size-nleft;
-
+    
     freeaddrinfo(res);
     close(fd);
     return 0;    
@@ -310,8 +310,8 @@ void list(char *first_word) {
     else printf("%s", msg_received);
 }
 
-void open() {
-    char msg_received[OPEN_RCV]; // AID + '\n' + '\0'
+void open_auction() {
+    char msg_received[OPEN_RCV];
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char aid[AID+2], name[NAME+1];
     int start_value, timeactive;
@@ -322,10 +322,17 @@ void open() {
     if (fname == NULL)
         return;
 
+    /* there is no uid or password on the user app */
+    if (strlen(uid) != UID || strlen(password) != PASSWORD) {
+        printf("incorrect open attempt\n");
+        return;
+    }
+
     if (get_file_size(fname, &fsize) == -1) {
         free(fname);
         return;
     }
+    
     size_t buffer_size = OPEN_SND+strlen(fname);
     buffer = (char*)malloc(buffer_size);
     memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
@@ -358,6 +365,33 @@ void open() {
         printf("auction started successfully with the identifier %s", aid);
     }
     else printf("%s", msg_received);
+}
+
+void close_auction() {
+    char buffer[CLOSE_SND];
+    char msg_received[CLS_RCV];
+    //char command[CMD_N_SPACE+1], status[STATUS+1];
+    char aid[AID+1];
+
+    if (confirm_close_input(input_buffer, aid) == -1)
+        return;
+
+    /* there is no uid or password on the user app */
+    if (strlen(uid) != UID || strlen(password) != PASSWORD) {
+        printf("incorrect close attempt\n");
+        return;
+    }
+
+    memset(buffer, '\0', CLOSE_SND); // initialize the buffer with \0 in every index
+    memset(msg_received, '\0', CLS_RCV); // initialize the msg with \0 in every index
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s %s", "CLS", uid, password, aid);
+
+    if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) 
+        return;
+
+    printf("%s",msg_received);
+
 }
 
 int main(int argc, char **argv) {
@@ -393,9 +427,9 @@ int main(int argc, char **argv) {
             else break;
         }
         else if (!strcmp("open", first_word))
-            open();
+            open_auction();
         else if (!strcmp("close", first_word))
-            printf("E\n");
+            close_auction();
         else if (!strcmp("myauctions", first_word) || !strcmp("ma", first_word))
             printf("F\n");
         else if (!strcmp("mybids", first_word) || !strcmp("mb", first_word))

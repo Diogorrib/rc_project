@@ -22,7 +22,7 @@ int get_file_size(const char *fname, long *fsize);
 /** Open and read a file and send it using tcp,
  * return is -1 in case of error
  */
-int send_image(int fd, char *fname);
+int send_file(int fd, char *fname);
 
 /** Verify if the buffer is only digits
  */

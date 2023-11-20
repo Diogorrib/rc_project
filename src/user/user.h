@@ -47,6 +47,8 @@ int get_list(char *destination, char *msg);
 
 void list(char *first_word);
 
-void open();
+void open_auction();
+
+void close_auction();
 
 #endif // __USER_H__

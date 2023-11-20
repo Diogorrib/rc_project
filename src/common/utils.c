@@ -16,7 +16,7 @@ int get_file_size(const char *fname, long *fsize) {
     return 0;
 }
 
-int send_image(int fd, char *fname) {
+int send_file(int fd, char *fname) {
     char buffer[512];
 
     /* Open file for reading */

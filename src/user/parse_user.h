@@ -25,5 +25,6 @@ int confirm_list(char *msg, char *auction, int index);
  */
 int confirm_open(char *msg);
 
+int confirm_close_input(char *buffer, char *aid);
 
 #endif // __PARSE_USER_H__

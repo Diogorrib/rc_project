@@ -135,3 +135,36 @@ int confirm_open(char *msg) {
     /* verify if AID is between 001 and 999 (is not 000) */
     return !(msg[initial] == '0' && msg[initial+1] == '0' && msg[initial+2] == '0');
 }
+
+int confirm_close_input(char *buffer, char *aid) {
+    size_t cmd_size = strlen("close ");
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != cmd_size+AID+1) {
+        printf("incorrect close attempt\n");
+        return -1;
+    }
+    /* verify if spaces are placed correctly */
+    if(buffer[cmd_size-1] != ' ' || buffer[cmd_size+AID] != '\n') {
+        printf("incorrect close attempt\n");
+        return -1;
+    }
+    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
+    sscanf(buffer+cmd_size, "%3s", aid);
+
+    /* verify if the uid and pass have the correct sizes */
+    if(strlen(aid) != AID) {
+        printf("incorrect close attempt\n");
+        return -1;
+    }
+    /* verify if the uid is only digits and the pass is only letters and digits */
+    if (!is_numeric(aid)) {
+        printf("incorrect close attempt\n");
+        return -1;
+    }
+    if(aid[0] == '0' && aid[1] == '0' && aid[2] == '0') {
+        printf("incorrect identifier\n");
+        return -1;
+    }
+    return 0;
+}
