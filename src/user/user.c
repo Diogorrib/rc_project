@@ -211,25 +211,6 @@ void unregister() {
         logged_in = 0;
 }
 
-void list(char *first_word) {
-    char msg_received[LST_RCV+1];
-    char buffer[CMD_N_SPACE+1];
-
-    if (confirm_only_cmd_input(input_buffer, first_word) == -1)
-        return;
-
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', CMD_N_SPACE+1);
-    memset(msg_received, '\0', LST_RCV+1);
-
-    /* Create the message to send to AS */
-    sprintf(buffer, "%s\n", "LST");
-    if (udp(buffer, LST_RCV, msg_received) == -1)
-        return;
-
-    process_list(msg_received);
-}
-
 void open_auction() {
     char msg_received[OPEN_RCV];
     char name[NAME+1];
@@ -286,6 +267,35 @@ void close_auction() {
     process_close(msg_received, aid, uid);
 }
 
+void myauctions(char *first_word){ (void)first_word; }
+
+void mybids(char *first_word){ (void)first_word; }
+
+void list(char *first_word) {
+    char msg_received[LST_RCV+1];
+    char buffer[CMD_N_SPACE+1];
+
+    if (confirm_only_cmd_input(input_buffer, first_word) == -1)
+        return;
+
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', CMD_N_SPACE+1);
+    memset(msg_received, '\0', LST_RCV+1);
+
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s\n", "LST");
+    if (udp(buffer, LST_RCV, msg_received) == -1)
+        return;
+
+    process_list(msg_received);
+}
+
+void show_asset(char *first_word){ (void)first_word; }
+
+void bid(char *first_word){ (void)first_word; }
+
+void show_record(char *first_word){ (void)first_word; }
+
 int main(int argc, char **argv) {
     char first_word[32];
     
@@ -315,7 +325,7 @@ int main(int argc, char **argv) {
             if (confirm_only_cmd_input(input_buffer, "exit") == -1)
                 continue;
             if (logged_in)
-                printf("Please logout first\n");
+                printf("please logout first\n");
             else break;
         }
         else if (!strcmp("open", first_word))
@@ -323,17 +333,17 @@ int main(int argc, char **argv) {
         else if (!strcmp("close", first_word))
             close_auction();
         else if (!strcmp("myauctions", first_word) || !strcmp("ma", first_word))
-            printf("F\n");
+            myauctions(first_word);
         else if (!strcmp("mybids", first_word) || !strcmp("mb", first_word))
-            printf("G\n");
+            mybids(first_word);
         else if (!strcmp("list", first_word) || !strcmp("l", first_word))
             list(first_word);
         else if (!strcmp("show_asset", first_word) || !strcmp("sa", first_word))
-            printf("I\n");
+            show_asset(first_word);
         else if (!strcmp("bid", first_word) || !strcmp("b", first_word))
-            printf("J\n");
+            bid(first_word);
         else if (!strcmp("show_record", first_word) || !strcmp("sr", first_word))
-            printf("K\n");
+            show_record(first_word);
         else
             printf("ERR: Command '%s' not valid\n", first_word);
     }

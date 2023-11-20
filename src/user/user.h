@@ -21,7 +21,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received);
 
 /** Return 1 if there is no uid or password else return 0
 */
-int no_uid_pass();
+int no_uid_pass(char *command);
 
 /** Save the login data (uid and password) and set logged_in to 1
  */
@@ -33,10 +33,20 @@ void logout();
 
 void unregister();
 
-void list(char *first_word);
-
 void open_auction();
 
 void close_auction();
+
+void myauctions(char *first_word);
+
+void mybids(char *first_word);
+
+void list(char *first_word);
+
+void show_asset(char *first_word);
+
+void bid(char *first_word);
+
+void show_record(char *first_word);
 
 #endif // __USER_H__
