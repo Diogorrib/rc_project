@@ -361,7 +361,7 @@ void open_auction() {
         printf("login is needed to open an auction\n");
     else if(!strcmp(status, "OK ") && confirm_open(msg_received)) {
         memcpy(aid, msg_received+CMD_N_SPACE+STATUS-1, AID+1);  // AID including \n
-        aid[4] = '\0';
+        aid[AID+1] = '\0';
         printf("auction started successfully with the identifier %s", aid);
     }
     else printf("%s", msg_received);
@@ -370,7 +370,7 @@ void open_auction() {
 void close_auction() {
     char buffer[CLOSE_SND];
     char msg_received[CLS_RCV];
-    //char command[CMD_N_SPACE+1], status[STATUS+1];
+    char command[CMD_N_SPACE+1], status[STATUS+1];
     char aid[AID+1];
 
     if (confirm_close_input(input_buffer, aid) == -1)
@@ -390,8 +390,27 @@ void close_auction() {
     if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) 
         return;
 
-    printf("%s",msg_received);
+    memcpy(command, msg_received, CMD_N_SPACE);
+    command[CMD_N_SPACE] = '\0';
+    // for next strcmp calls is needed strlen(status) = 3 
+    memcpy(status, msg_received+CMD_N_SPACE, STATUS-1);
+    status[STATUS-1] = '\0';
 
+    if(strcmp(command, "RCL "))
+        printf("%s", msg_received);
+    else if(!strcmp(status, "OK\n") && msg_received[7] == '\0')
+        printf("auction was successfully closed\n");
+    else if(!strcmp(status, "NLG") && msg_received[7] == '\n' && msg_received[8] == '\0')
+        printf("login is needed to close an auction\n");
+    else if(!strcmp(status, "EAU") && msg_received[7] == '\n' && msg_received[8] == '\0')
+        printf("auction %s does not exist\n", aid);
+    else if(!strcmp(status, "EOW") && msg_received[7] == '\n' && msg_received[8] == '\0')
+        printf("auction is not owned by user %s\n", uid);
+    else if(!strcmp(status, "END") && msg_received[7] == '\n' && msg_received[8] == '\0')
+        printf("auction time had already ended\n");
+    else if(!strcmp(status, "NOK") && msg_received[7] == '\n' && msg_received[8] == '\0')
+        printf("incorrect close attempt\n");
+    else printf("%s", msg_received);
 }
 
 int main(int argc, char **argv) {
