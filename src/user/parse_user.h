@@ -11,9 +11,9 @@ int confirm_login_input(char *buffer, char *uid, char *pass);
 int confirm_only_cmd_input(char *buffer, const char *cmd);
 
 /** This function return the fname given in the input,
- * if input is not correct return is NULL
+ * if input is not correct return is -1
  */
-char *confirm_open_input(char *buffer, char *name, int *start_value, int *timeactive);
+int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, int *timeactive);
 
 /** If command plus aid input is not correct return is -1
  */

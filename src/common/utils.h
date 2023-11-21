@@ -37,4 +37,8 @@ int is_alphanumeric(char *buffer);
  */
 int is_alphanumeric_extra(char *buffer);
 
+/** Verify if the buffer is a date time string
+ */
+int isDateTime(const char *buffer);
+
 #endif // __UTILS_H__

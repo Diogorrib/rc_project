@@ -213,35 +213,27 @@ void unregister() {
 
 void open_auction() {
     char msg_received[OPEN_RCV];
-    char name[NAME+1];
+    char name[NAME+1], fname[FNAME];
+    char buffer[OPEN_SND];
     int start_value, timeactive;
-    char *fname,*buffer;
     long fsize;
 
-    fname = confirm_open_input(input_buffer, name, &start_value, &timeactive);
-    if (fname == NULL)
+    if (confirm_open_input(input_buffer, name, fname, &start_value, &timeactive) == -1)
         return;
 
     if (no_uid_pass("open")) return;
 
-    if (get_file_size(fname, &fsize) == -1) {
-        free(fname);
+    if (get_file_size(fname, &fsize) == -1)
         return;
-    }
     
-    size_t buffer_size = OPEN_SND+strlen(fname);
-    buffer = (char*)malloc(buffer_size);
     memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
-    memset(buffer, '\0', buffer_size); // initialize the buffer with \0 in every index
+    memset(buffer, '\0', OPEN_SND); // initialize the buffer with \0 in every index
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %d %d %s %ld ",
             "OPA", uid, password, name, start_value, timeactive, fname, fsize);
 
-    if (tcp(buffer, fname, OPEN_RCV, msg_received) == -1) {
-        free(buffer); free(fname);
+    if (tcp(buffer, fname, OPEN_RCV, msg_received) == -1)
         return;
-    }
-    free(buffer); free(fname);
 
     process_open(msg_received);
 }

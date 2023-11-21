@@ -44,7 +44,7 @@ void append_auction(char *string, char *auction);
  * and their status (active or not active) separated by newline character
  * if return is -1 there is an auction that is not correctly written
  */
-int get_list(char *destination, char *msg);
+int get_auctions(char *destination, char *msg);
 
 /** Verify if an auction (AID + 1 space + state + (1 space or newline character))
  * is correctly written (if so return 0, else return 1)
@@ -66,7 +66,8 @@ void process_ma(char *msg);
  */
 void process_mb(char *msg);
 
-int confirm_sr(char *msg);
+int confirm_bid(char *msg);
+char *get_bids(char *msg, int offset);
 
 void process_sr(char *msg, char *aid);
 

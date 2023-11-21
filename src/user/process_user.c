@@ -163,7 +163,7 @@ void append_auction(char *string, char *auction) {
     strcpy(string + strlen(string), aux);
 }
 
-int get_list(char *destination, char *msg) {
+int get_auctions(char *destination, char *msg) {
     char auction[7];
     auction[6] = '\0';
 
@@ -208,7 +208,7 @@ void process_list(char *msg) {
 
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_list(auctions, msg) == -1)
+        if (get_auctions(auctions, msg) == -1)
             return;
         printf("Auctions List:\n%s", auctions);
     }
@@ -233,7 +233,7 @@ void process_ma(char *msg) {
 
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_list(auctions, msg) == -1)
+        if (get_auctions(auctions, msg) == -1)
             return;
         printf("My Auctions:\n%s", auctions);
     }
@@ -258,7 +258,7 @@ void process_mb(char *msg) {
 
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_list(auctions, msg) == -1)
+        if (get_auctions(auctions, msg) == -1)
             return;
         printf("My Bids:\n%s", auctions);
     }
@@ -266,49 +266,67 @@ void process_mb(char *msg) {
 }
 
 int confirm_bid(char *msg) {
-    char *start_time;
-    sscanf(msg+...,"%4d%02d%02d %02d:%02d:%02d", start_time->tm_year+1900,
-            start_time->tm_mon+1, start_time->tm_mday, start_time->tm_hour,
-            start_time->tm_min, start_time->tm_sec);
+    (void)msg;
+    return 0;
 }
 
-int confirm_sr(char *msg, int offset) {
-    char host_uid[UID+1], name[NAME+1], fname[FNAME+1];
+char *get_bids(char *msg, int offset) {
+    char host_uid[UID+1], name[NAME+1], fname[FNAME+1], start_date[DATE_TIME+1];
     int start_value, timeactive;
     char aux[11];
     
-    memset(host_uid, '\0', UID+1); // initialize the uid with \0 in every index
-    memset(name, '\0', NAME+1); // initialize the pass with \0 in every index
-    memset(fname, '\0', FNAME+1); // initialize the pass with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(host_uid, '\0', UID+1);
+    memset(name, '\0', NAME+1);
+    memset(fname, '\0', FNAME+1);
+    memset(start_date, '\0', DATE_TIME+1);
     
     sscanf(msg+offset, "%6s", host_uid);
-    offset += UID+1;
+    offset += UID+1;    // advance string
     /* verify if the uid has the correct size and is only digits */
     if(strlen(uid) != UID || !is_numeric(uid) || msg[offset-1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
-        return -1;
+        return NULL;
     }
 
     sscanf(msg+offset, "%10s", name);
-    offset += strlen(name)+1;
-    sscanf(msg+offset, "%24s", fname);
-    offset += strlen(fname)+1;
-    if (sscanf(msg+offset, "%d", start_value) != 1) {
+    offset += strlen(name)+1;   // advance string
+    /* verify if the string has the correct size is only letters and numbers and if spaces are placed correctly */
+    if(strlen(name) > NAME || !is_alphanumeric(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
-        return -1;
+        return NULL;
+    }
+
+    sscanf(msg+offset, "%24s", fname);
+    offset += strlen(fname)+1;  // advance string
+    /* verify if the string has the correct size is a valid file name and if spaces are placed correctly */
+    if(strlen(fname) > FNAME || !is_alphanumeric_extra(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
+        printf("incorrect show_record attempt\n");
+        return NULL;
+    }
+
+
+    /* verify if the string is only digits */
+    if (sscanf(msg+offset, "%d", &start_value) != 1) {
+        printf("incorrect show_record attempt\n");
+        return NULL;
     }
     sprintf(aux, "%d", start_value);
     offset += strlen(aux)+1;
-    /* verify if the spaces are placed correctly */
-    if(buffer[offset-1] != ' ' || buffer[offset] == ' ' || buffer[offset] == '-') {
+    /* verify if the spaces are placed correctly and max of 6 digits */
+    if(msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-' || strlen(aux) > 6) {
         printf("incorrect show_record attempt\n");
-        return -1;
+        return NULL;
     }
 
+    memcpy(start_date, msg+offset, DATE_TIME);
+    if (!isDateTime(start_date)) {
+        printf("incorrect show_record attempt\n");
+        return NULL;
+    }
 
-    if (start_value > 999999 || timeactive > 99999) 
-
-    
+    // TODO ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    return bids;
 }
 
 void process_sr(char *msg, char *aid) {
@@ -324,8 +342,10 @@ void process_sr(char *msg, char *aid) {
         printf("%s does not exist\n", aid);
 
     else if(!strcmp(status, "OK ") && msg[7] != ' ') {
-        confirm_sr(msg, aid, CMD_N_SPACE+STATUS+1);
-        printf("%s", msg);
+        char *bids = get_bids(msg, aid, CMD_N_SPACE+STATUS+1);
+        if (bids == NULL) return;
+        printf("Bids from auction %s - %s", aid, bids);
+        free(bids);
     }
     else printf("%s", msg);
 }

@@ -44,69 +44,56 @@ int confirm_only_cmd_input(char *buffer, const char *cmd) {
     return 0;
 }
 
-char *confirm_open_input(char *buffer, char *name, int *start_value, int *timeactive) {
-    char *fname;
+int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, int *timeactive) {
     char aux[11];
     size_t offset;
     size_t cmd_size = strlen("open ");
-    size_t fname_size = strlen(buffer)-cmd_size+1; //worst case all input except cmd is the same string
     
-    fname = (char *)malloc(fname_size); // allocate space for fname worst case
     memset(name, '\0', NAME+1); // initialize the name with \0 in every index
-    memset(fname, '\0', fname_size); // initialize the fname with \0 in every index
+    memset(fname, '\0', FNAME+1); // initialize the fname with \0 in every index
 
     sscanf(buffer+cmd_size, "%10s", name);
     /* verify if the string has the correct size is only letters and numbers and if spaces are placed correctly */
-    if(strlen(name) > NAME || !is_alphanumeric(name) ||
-        buffer[strlen(name)+cmd_size] != ' ' || buffer[strlen(name)+cmd_size+1] == ' ') {
-        printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
-    }
     offset = cmd_size+strlen(name)+1;   // advance string
-    sscanf(buffer+offset, "%s", fname);
-    fname_size = strlen(fname);
-    /* verify if the spaces are placed correctly */
-    if(buffer[offset+fname_size] != ' ' || buffer[offset+fname_size+1] == ' ' || buffer[offset+fname_size+1] == '-') {
+    if(strlen(name) > NAME || !is_alphanumeric(name) || buffer[offset-1] != ' ' || buffer[offset] == ' ') {
         printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
+        return -1;
     }
-    offset += fname_size+1; // advance string
+    
+    sscanf(buffer+offset, "%s", fname);
+    offset += strlen(fname)+1; // advance string
+    /* verify if the spaces are placed correctly */
+    if(buffer[offset-1] != ' ' || buffer[offset] == ' ' || buffer[offset] == '-') {
+        printf("incorrect open attempt\n");
+        return -1;
+    }
+    
     /* verify if the string is only digits */
     if (sscanf(buffer+offset, "%d", start_value) != 1) {
         printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
+        return -1;
     }
     sprintf(aux, "%d", *start_value);
-    /* verify if the spaces are placed correctly */
-    if(buffer[offset+strlen(aux)] != ' ' || buffer[offset+strlen(aux)+1] == ' ' || buffer[offset+strlen(aux)+1] == '-') {
-        printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
-    }
     offset += strlen(aux)+1;    // advance string
+    /* verify if the spaces are placed correctly and max of 6 digits */
+    if(buffer[offset-1] != ' ' || buffer[offset] == ' ' || buffer[offset] == '-' || strlen(aux) > 6) {
+        printf("incorrect open attempt\n");
+        return -1;
+    }
+    
     /* verify if the string is only digits */
     if (sscanf(buffer+offset, "%d", timeactive) != 1) {
         printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
+        return -1;
     }
     sprintf(aux, "%d", *timeactive);
-    /* verify if the last characters are placed correctly */
-    if(buffer[offset+strlen(aux)] != '\n' || buffer[offset+strlen(aux)+1] != '\0') {
+    offset += strlen(aux)+1;    // advance string
+    /* verify if the last characters are placed correctly and max of 5 digits */
+    if(buffer[offset-1] != '\n' || buffer[offset] != '\0' || strlen(aux) > 5) {
         printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
+        return -1;
     }
-    /* start value is maximum 6 digits and time active is maximum 5 digits */
-    if (*start_value > 999999 || *timeactive > 99999) {
-        printf("incorrect open attempt\n");
-        free(fname);
-        return NULL;
-    }
-    return fname;
+    return 0;
 }
 
 int confirm_aid_input(char *buffer, char *cmd, char *aid) {
