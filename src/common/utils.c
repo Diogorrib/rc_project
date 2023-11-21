@@ -50,3 +50,12 @@ int is_alphanumeric(char *buffer) {
     }
     return 1;
 }
+
+int is_alphanumeric_extra(char *buffer) {
+    for (int i = 0; i < strlen(buffer); i++) {
+        if (!isdigit(buffer[i]) && !isalpha(buffer[i]) &&
+            buffer[i] != '-' && buffer[i] != '_' && buffer[i] != '.')
+            return 0;
+    }
+    return 1;
+}

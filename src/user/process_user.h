@@ -20,6 +20,21 @@ int process_logout(char *msg, const char *uid);
  */
 int process_unregister(char *msg, const char *uid);
 
+/** Verify if the aid from msg is correctly written
+ * (if so return 1, else return 0)
+ */
+int confirm_open(char *msg);
+
+/** Verify if response message from AS is correct, 
+ * gives feedback to the user whether the operation was executed successfully or not
+ */
+void process_open(char *msg);
+
+/** Verify if response message from AS is correct, 
+ * gives feedback to the user whether the operation was executed successfully or not
+ */
+void process_close(char *msg, char *aid, const char *uid);
+
 /** Append an auction (AID + 1 space + state + (1 space or newline character))
  * to the string
  */
@@ -41,19 +56,18 @@ int confirm_list(char *msg, char *auction, int index);
  */
 void process_list(char *msg);
 
-/** Verify if the aid from msg is correctly written
- * (if so return 1, else return 0)
+/** Verify if response message from AS is correct, 
+ * print in each line auction AID and if that auction is active or not
  */
-int confirm_open(char *msg);
+void process_ma(char *msg);
 
 /** Verify if response message from AS is correct, 
- * gives feedback to the user whether the operation was executed successfully or not
+ * print in each line auction AID and if that auction is active or not
  */
-void process_open(char *msg);
+void process_mb(char *msg);
 
-/** Verify if response message from AS is correct, 
- * gives feedback to the user whether the operation was executed successfully or not
- */
-void process_close(char *msg, char *aid, const char *uid);
+int confirm_sr(char *msg);
+
+void process_sr(char *msg, char *aid);
 
 #endif // __PROCESS_USER_H__

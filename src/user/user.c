@@ -251,7 +251,7 @@ void close_auction() {
     char msg_received[CLS_RCV];
     char aid[AID+1];
 
-    if (confirm_close_input(input_buffer, aid) == -1)
+    if (confirm_aid_input(input_buffer, "close", aid) == -1)
         return;
 
     if (no_uid_pass("close")) return;
@@ -259,7 +259,7 @@ void close_auction() {
     memset(buffer, '\0', CLOSE_SND); // initialize the buffer with \0 in every index
     memset(msg_received, '\0', CLS_RCV); // initialize the msg with \0 in every index
     /* Create the message to send to AS */
-    sprintf(buffer, "%s %s %s %s", "CLS", uid, password, aid);
+    sprintf(buffer, "%s %s %s %s\n", "CLS", uid, password, aid);
 
     if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) 
         return;
@@ -267,9 +267,47 @@ void close_auction() {
     process_close(msg_received, aid, uid);
 }
 
-void myauctions(char *first_word){ (void)first_word; }
+void myauctions(char *first_word){
+    char msg_received[LST_RCV+1];
+    char buffer[MY_SND];
 
-void mybids(char *first_word){ (void)first_word; }
+    if (confirm_only_cmd_input(input_buffer, first_word) == -1)
+        return;
+
+    if (no_uid_pass("myauctions")) return;
+
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', MY_SND);
+    memset(msg_received, '\0', LST_RCV+1);
+
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s\n", "LMA", uid);
+    if (udp(buffer, LST_RCV, msg_received) == -1)
+        return;
+        
+    process_ma(msg_received);
+}
+
+void mybids(char *first_word){ 
+    char msg_received[LST_RCV+1];
+    char buffer[MY_SND];
+
+    if (confirm_only_cmd_input(input_buffer, first_word) == -1)
+        return;
+
+    if (no_uid_pass("mybids")) return;
+
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', MY_SND);
+    memset(msg_received, '\0', LST_RCV+1);
+
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s\n", "LMB", uid);
+    if (udp(buffer, LST_RCV, msg_received) == -1)
+        return;
+        
+    process_mb(msg_received);
+}
 
 void list(char *first_word) {
     char msg_received[LST_RCV+1];
@@ -294,7 +332,24 @@ void show_asset(char *first_word){ (void)first_word; }
 
 void bid(char *first_word){ (void)first_word; }
 
-void show_record(char *first_word){ (void)first_word; }
+void show_record(char *first_word){
+    char msg_received[SR_RCV+1];
+    char buffer[SR_SND];
+    char aid[AID+1];
+
+    if (confirm_aid_input(input_buffer, first_word, aid) == -1)
+        return;
+
+    memset(buffer, '\0', SR_SND); // initialize the buffer with \0 in every index
+    memset(msg_received, '\0', SR_RCV+1); // initialize the msg with \0 in every index
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s\n", "SRC", aid);
+
+    if (udp(buffer, SR_RCV, msg_received) == -1)
+        return;
+
+    process_sr(msg_received, aid);
+}
 
 int main(int argc, char **argv) {
     char first_word[32];

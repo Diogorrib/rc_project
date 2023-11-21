@@ -15,8 +15,8 @@ int confirm_only_cmd_input(char *buffer, const char *cmd);
  */
 char *confirm_open_input(char *buffer, char *name, int *start_value, int *timeactive);
 
-/** If close input is not correct return is -1
+/** If command plus aid input is not correct return is -1
  */
-int confirm_close_input(char *buffer, char *aid);
+int confirm_aid_input(char *buffer, char *cmd, char *aid);
 
 #endif // __PARSE_USER_H__
