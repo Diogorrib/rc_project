@@ -66,12 +66,11 @@ void process_ma(char *msg);
  */
 void process_mb(char *msg);
 
-int confirm_bid(char *bid);
+long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time);
 
-int build_bid(char *bid, int offset, char *msg, char *uid, int *bid_value, char *bid_datetime, int *bid_sec_time);
-int get_bids_list(char *bids, char *msg, int offset);
+long get_bids_list(char *bids, char *msg, long offset);
 
-int get_bids(char *bids, char *msg, int offset);
+int get_bids(char *bids, char *msg, int initial);
 
 void process_sr(char *msg, char *aid);
 

@@ -265,107 +265,74 @@ void process_mb(char *msg) {
     else printf("%s", msg);
 }
 
-int confirm_bid(char *bid) {
-    char bidder_uid[UID+1], start_date[DATE_TIME+1];
-    int bid_value, offset, bid_sec_time;
-    char ints_to_str[19]; // max size of an int
+long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time) {
+    char ints_to_str[19]; // max size of an long
+    size_t offset = (size_t) initial;
 
     /* verify if the first letter is B and the second character is a space */
-    if (bid[0] != 'B' || bid[1] != ' ') 
-        return 1;
+    if (msg[offset] != 'B' || msg[offset+1] != ' ' || msg[offset+2] == ' ') 
+        return 0;
     
-    /* verify if bid_value is valid and if theres is a space next */
-    sscanf(bid+2, "%6s", bidder_uid);
-    if(strlen(bidder_uid) != UID || !is_numeric(bidder_uid) || bidder_uid[0] == '-' || bid[2+UID] != ' ')
-        return 1;
+    /* verify if bid_uid is valid and if theres is a space next */
+    sscanf(msg+offset+2, "%6s", uid);
+    offset += 2+UID+1;
+    if(strlen(uid) != UID || !is_numeric(uid) || msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-')
+        return 0;
 
     /* verify if bid_value is valid and if theres is a space next */
-    sscanf(bid+2+UID+1, "%d", &bid_value);
-    sprintf(ints_to_str, "%d", bid_value);
-    offset = 2+UID+ (int) strlen(ints_to_str) + 1;
-    if(!is_numeric(ints_to_str) || ints_to_str[0] == '-' || bid[offset] != ' ')
-        return 1;
+    if (sscanf(msg+offset, "%ld", value) != 1)
+        return 0;
+    sprintf(ints_to_str, "%ld", *value);
+    offset += strlen(ints_to_str) + 1;
+    if(msg[offset-1] != ' ' || msg[offset] == ' ')
+        return 0;
 
     /* verify if bid_date-time is valid and if theres is a space next */
-    memcpy(start_date, bid+offset+1, DATE_TIME);
+    memcpy(date, msg+offset, DATE_TIME);
     offset += DATE_TIME+1;
-    if (!isDateTime(start_date) || bid[offset] != ' ')
-        return 1;
+    if (!isDateTime(date) || msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-')
+        return 0;
 
-    /* verify if bid_value is valid and if theres is a space next */
-    sscanf(bid+offset, "%d", &bid_sec_time);
-    sprintf(ints_to_str, "%d", bid_sec_time);
-    offset += (int) strlen(ints_to_str) + 1;
-    if(!is_numeric(ints_to_str) || ints_to_str[0] == '-'|| (bid[offset] != ' ' && 
-        bid[offset] != '\0')) /*in case the bid is still active*/
-        return 1;
+    /* verify if bid_time is valid and if theres is a space next */
+    if (sscanf(msg+offset, "%d", bid_time) != 1)
+        return 0;
+    sprintf(ints_to_str, "%d", *bid_time);
+    offset += strlen(ints_to_str) + 1;
+    if(msg[offset-1] != ' ' || msg[offset] == ' ')
+        return 0;
 
-    return 0;
+    return (long) offset;
 }
 
-int build_bid(char *bid, int offset, char *msg, char *uid, int *bid_value, char *bid_datetime, int *bid_sec_time) {
-    int offset_aux;
-    char ints_to_str[19]; // max size of an int
-    offset_aux = 0;
+long get_bids_list(char *bids, char *msg, long offset) {
+    char bid[BID+1], uid[UID+1], date[DATE_TIME+1];
+    long value;
+    int bid_time;
 
-    /* Build the 'B ' */
-    memcpy(bid, msg + offset, 2);
-    memcpy(bid+2, msg + offset + 2, 7);
-    memcpy(uid, msg + offset + 2, 7);
-
-
-    /* Build the bid_value */
-    sscanf(msg+offset+2+7, "%d", bid_value);
-    sprintf(ints_to_str, "%d", *bid_value);
-    offset += 2+7;
-    offset_aux += 2+7;
-    memcpy(bid+offset_aux, msg + offset, strlen(ints_to_str) + 1);
-    offset += (int) strlen(ints_to_str) + 1;
-    offset_aux += (int) strlen(ints_to_str) + 1;
-
-    /* Build the bid_date-time */
-    memcpy(bid_datetime, msg + offset, DATE_TIME);
-    memcpy(bid+offset_aux, msg + offset, DATE_TIME);
-    offset += DATE_TIME;
-    offset_aux += DATE_TIME;
-
-    /* Build the bid_sec_time */
-    sscanf(msg+offset, "%d", bid_sec_time);
-    sprintf(ints_to_str, "%d", *bid_sec_time);
-    memcpy(bid+offset_aux, msg + offset, strlen(ints_to_str) + 1);
-    offset += (int) strlen(ints_to_str) + 1;
-
-    return offset;
-}
-
-int get_bids_list(char *bids, char *msg, int offset) {
-    char bid[BID+1], uid[UID+1], bid_datetime[DATE_TIME+1];
-    int bid_value, bid_sec_time;
-    bid[BID] = '\0';
     memset(bid, '\0', BID+1);
 
     for (int i = 0; i < MAX_BIDS; i++) {
         /* get a bid from msg (BID) */
-        
-        offset = build_bid(bid, offset, msg, uid, &bid_value, bid_datetime, &bid_sec_time);
-        if (confirm_bid(bid)) {
+        offset = confirm_bid(msg, offset, uid, &value, date, &bid_time);
+        if (offset == 0) {
             printf("%s", msg);
-            return -1;
+            return 0;
         }
 
-        sprintf(bids + strlen(bids), "uid: %s bid_value: %d time_of_bid: %s time_since_start: %d seconds\n",
-            uid, bid_value, bid_datetime, bid_sec_time);
-        (void) bids;
-        if (msg[offset + 1] == 'E') break; // no more bids
-        offset ++;
+        /* Append a bid to the message that will be shown to user */
+        sprintf(bids + strlen(bids), "uid: %s\tbid_value: %ld\ttime_of_bid: %s\ttime_since_start: %d seconds\n",
+                uid, value, date, bid_time);
+
+        if (msg[offset] == 'E' || msg[offset-1] == '\n') break; // no more bids
     }
     return offset;
 }
 
-int get_bids(char *bids, char *msg, int offset) {
-    char host_uid[UID+1], name[NAME+1], fname[FNAME+1], start_date[DATE_TIME+1], e_space[2], end_date[DATE_TIME+1];
-    int start_value, timeactive, end_timeactive;
+int get_bids(char *bids, char *msg, int initial) {
+    char host_uid[UID+1], name[NAME+1], fname[FNAME+1], start_date[DATE_TIME+1], end_date[DATE_TIME+1];
+    int start_value, timeactive;
     char ints_to_str[7];
+    size_t offset = (size_t) initial;
     
     /* initialize strings with \0 in every index */
     memset(host_uid, '\0', UID+1);
@@ -373,18 +340,19 @@ int get_bids(char *bids, char *msg, int offset) {
     memset(fname, '\0', FNAME+1);
     memset(start_date, '\0', DATE_TIME+1);
     memset(bids, '\0', SR_PRINT);
-    memset(e_space, '\0', 2);
+    memset(end_date, '\0', DATE_TIME+1);
     
     sscanf(msg+offset, "%6s", host_uid);
-    offset += (int) UID+1;    // advance string
+    offset += UID+1;    // advance string
     /* verify if the uid has the correct size and is only digits */
+
     if(strlen(host_uid) != UID || !is_numeric(host_uid) || msg[offset - 1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
         return -1;
     }
 
     sscanf(msg+offset, "%10s", name);
-    offset += (int) strlen(name)+1;   // advance string
+    offset += strlen(name)+1;   // advance string
     /* verify if the string has the correct size is only letters and numbers and if spaces are placed correctly */
     if(strlen(name) > NAME || !is_alphanumeric(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
@@ -392,7 +360,7 @@ int get_bids(char *bids, char *msg, int offset) {
     }
 
     sscanf(msg+offset, "%24s", fname);
-    offset += (int) strlen(fname)+1;  // advance string
+    offset += strlen(fname)+1;  // advance string
     /* verify if the string has the correct size is a valid file name and if spaces are placed correctly */
     if(strlen(fname) > FNAME || !is_alphanumeric_extra(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
@@ -405,13 +373,14 @@ int get_bids(char *bids, char *msg, int offset) {
         return -1;
     }
     sprintf(ints_to_str, "%d", start_value);
-    offset += (int) strlen(ints_to_str)+1;
+    offset += strlen(ints_to_str)+1;
     /* verify if the spaces are placed correctly and max of 6 digits */
     if(msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-' || strlen(ints_to_str) > 6) {
         printf("incorrect show_record attempt\n");
         return -1;
     }
 
+    /* verify if the string is a date time */
     memcpy(start_date, msg+offset, DATE_TIME);
     offset += DATE_TIME+1;
     if (!isDateTime(start_date)) {
@@ -425,7 +394,7 @@ int get_bids(char *bids, char *msg, int offset) {
         return -1;
     }
     sprintf(ints_to_str, "%d", timeactive);
-    offset += (int) strlen(ints_to_str)+1;
+    offset += strlen(ints_to_str)+1;
     /* verify if the spaces are placed correctly and max of 5 digits */
     if((msg[offset-1] != ' ' || msg[offset] == ' ' || strlen(ints_to_str) > 5) && 
        (msg[offset-1] != '\n')) { //in case there are no bids and it's still active
@@ -433,48 +402,48 @@ int get_bids(char *bids, char *msg, int offset) {
         return -1;
     }
 
+    /* First part of the message shown to user */
     sprintf(bids, "%s (%s) hosted by %s started with value %d, at %s. Will be open during %d seconds:\n",
             name, fname, host_uid, start_value, start_date, timeactive);
 
-    //verification of bids
-    if(msg[offset] != 'E'){
-        offset = get_bids_list(bids, msg, offset);
-        if ( offset == -1)
-            return -1;
-    }else
-        offset --;
+    /* verification of bids (B messages) */
+    if(msg[offset] != 'E'){ // there are bids for this asset
+        offset = (size_t) get_bids_list(bids, msg, (long) offset);
+        if (offset == 0) return -1;
+    }
 
+    if (msg[offset] == '\n') return 0; // auction is still active
 
-    //verification of end
-    sscanf(msg+offset, "%2s", e_space);    
+    /* verify if the first letter is E and the second character is a space */
+    if (msg[offset] != 'E' || msg[offset+1] != ' ' || msg[offset+2] == ' ') {
+        printf("%s\n", bids);
+        return -1;
+    }
     offset +=2;
-    if(memcmp(e_space, "E ", 2) == 0 || msg[offset-1] == ' '){
-        printf("Oincorrect show_record attempt\n");
-        return -1;
-    }
 
-    memcpy(end_date, msg+offset+1, DATE_TIME);
+    /* verify if the string is a date time */
+    memcpy(end_date, msg+offset, DATE_TIME);
     offset += DATE_TIME+1;
-    if (!isDateTime(start_date) || msg[offset] != ' ' || msg[offset + 1] == ' ' ) {
-        printf("Aincorrect show_record attempt\n");
-        return -1;
-    }
-
-    /* verify if the string is only digits */
-    if (sscanf(msg+offset, "%d", &end_timeactive) != 1) {
-        printf("Bincorrect show_record attempt\n");
-        return -1;
-    }
-    sprintf(ints_to_str, "%d", end_timeactive);
-    offset += (int) strlen(ints_to_str)+1;
-    /* verify if the spaces are placed correctly and max of 5 digits */
-    if( msg[offset] == ' ' || msg[offset+1] != '\0' || strlen(ints_to_str) > 5 || msg[offset] != '\n') { 
+    if (!isDateTime(start_date) || msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-') {
         printf("incorrect show_record attempt\n");
         return -1;
     }
 
-    sprintf(bids + strlen(bids), "Ended at %s, opened for %d seconds.\n",
-            end_date, end_timeactive);
+    /* verify if the string is only digits */
+    if (sscanf(msg+offset, "%d", &timeactive) != 1) {
+        printf("incorrect show_record attempt\n");
+        return -1;
+    }
+    sprintf(ints_to_str, "%d", timeactive);
+    offset += strlen(ints_to_str);
+    /* verify if the spaces are placed correctly and max of 5 digits */
+    if(msg[offset] == ' ' || msg[offset+1] != '\0' || strlen(ints_to_str) > 5 || msg[offset] != '\n') { 
+        printf("incorrect show_record attempt\n");
+        return -1;
+    }
+
+    /* Last part of the message shown to user */
+    sprintf(bids + strlen(bids), "Ended at %s, opened for %d seconds.\n", end_date, timeactive);
 
     return 0;
 }
@@ -485,7 +454,7 @@ void process_sr(char *msg, char *aid) {
 
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-    printf("%s", msg);
+
     if(strcmp(command, "RRC "))
         printf("%s", msg);
     
