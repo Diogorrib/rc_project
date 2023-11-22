@@ -23,7 +23,6 @@ int send_file(int fd, char *fname) {
     FILE *file = fopen(fname, "rb");
     if (file == NULL) {
         printf("Error opening file %s for reading\n", fname);
-        close(fd);
         return -1;
     }
 

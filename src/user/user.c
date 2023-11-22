@@ -27,6 +27,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
     struct sockaddr_in addr;
     socklen_t addrlen;
     ssize_t n;
+    struct timeval send_timeout, recv_timeout;
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
     if(fd==-1) {//error
@@ -41,22 +42,38 @@ int udp(char *buffer, size_t size, char *msg_received) {
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
     if(errcode!=0) {//error
         printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        close(fd); return -1;
+    }
+
+    /* Set send timeout */ 
+    send_timeout.tv_sec = 5; // 5 seconds timeout
+    send_timeout.tv_usec = 0;
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+        printf("Can't connect with the server AS. Try again\n");
+        freeaddrinfo(res); close(fd); return -1;
     }
 
     /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
     if(n==-1) {//error
+        printf("Can't send to server AS. Try again\n");
+        freeaddrinfo(res); close(fd); return -1;
+    }
+
+    /* Set receive timeout */
+    recv_timeout.tv_sec = 5; // 5 seconds timeout
+    recv_timeout.tv_usec = 0;
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
         printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        freeaddrinfo(res); close(fd); return -1;
     }
 
     addrlen=sizeof(struct sockaddr_in);
     /* receive message from AS */
     n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) {//error
-        printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        printf("Can't receive from server AS. Try again\n");
+        freeaddrinfo(res); close(fd); return -1;
     }
     
     freeaddrinfo(res);
@@ -91,46 +108,47 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
     n=getaddrinfo(as_ip,as_port,&hints,&res);
     if(n != 0) {//error
         printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        close(fd); return -1;
     }
 
     n=connect(fd,res->ai_addr,res->ai_addrlen);
     if(n == -1) {//error
         printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        freeaddrinfo(res); close(fd); return -1;
     }
 
     nleft=(ssize_t)strlen(msg_sent); ptr=msg_sent;
     /* send message to AS not inclunding the \n */
     while (nleft>0){nwritten=write(fd,ptr,(size_t)nleft);
                     if(nwritten <= 0){//error
-                        printf("Can't connect with the server AS. Try again\n");
-                        return -1;}
+                        printf("Can't send to server AS. Try again\n");
+                        freeaddrinfo(res); close(fd); return -1;}
                     nleft-=nwritten; ptr+=nwritten;}  
 
     if (fname != NULL) {
-        if (send_file(fd, fname) == -1)
-            return -1;
+        if (send_file(fd, fname) == -1) {
+            freeaddrinfo(res); close(fd); return -1;
+        }
     }
     ptr = "\n"; /* send \n to AS */
     nwritten=write(fd,ptr,1);
     if(nwritten <= 0) {//error
-        printf("Can't connect with the server AS. Try again\n");
-        return -1;
+        printf("Can't send to server AS. Try again\n");
+        freeaddrinfo(res); close(fd); return -1;
     }
     nleft=size; ptr=msg_received;
     /* receive message from AS */
     while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
                     if(nread == -1){//error
-                        printf("Can't connect with the server AS. Try again\n");
-                        return -1;}
+                        printf("Can't receive from server AS. Try again\n");
+                        freeaddrinfo(res); close(fd); return -1;}
                     else if(nread == 0) break; //closed by peer
                     nleft-=nread; ptr+=nread;}
     nread=size-nleft;
     
     freeaddrinfo(res);
     close(fd);
-    return 0;    
+    return 0;
 }
 
 int no_uid_pass(char *command) {

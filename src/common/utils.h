@@ -13,7 +13,10 @@
 #include <unistd.h>
 #include <signal.h>
 #include <ctype.h>
-#include <time.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 
 /** Get the size of the file, if return is -1 it is possible that fname is not
  * the name of a file or this file does not exist
