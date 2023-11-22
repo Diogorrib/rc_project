@@ -408,7 +408,10 @@ int get_bids(char *bids, char *msg, int initial) {
     sprintf(bids, "%s (%s) hosted by %s started with value %d, at %s. Will be open during %d seconds:\n",
             name, fname, host_uid, start_value, start_date, timeactive);
 
-    if (msg[offset-1] == '\n') return 0; // auction has no bids yet and is still active
+    if (msg[offset-1] == '\n') {
+        sprintf(bids + strlen(bids), "No bids yet for this auction\nAuction is still active\n");
+        return 0; // auction has no bids yet and is still active
+    }
 
     /* verification of bids (B messages) */
     if(msg[offset] != 'E'){ // there are bids for this asset
@@ -416,13 +419,18 @@ int get_bids(char *bids, char *msg, int initial) {
         if (offset == 0) {
             return -1;
         }
-    }
+    } else
+        sprintf(bids + strlen(bids), "No bids yet for this auction\n");
 
-    if (msg[offset-1] == '\n') return 0; // auction is still active
+
+    if (msg[offset-1] == '\n') {
+        sprintf(bids + strlen(bids), "Auction is still active\n");
+        return 0;
+    }        
 
     /* verify if the first letter is E and the second character is a space */
     if (msg[offset] != 'E' || msg[offset+1] != ' ' || msg[offset+2] == ' ') {
-        printf("incorrectt show_record attempt\n");
+        printf("incorrect show_record attempt\n");
         return -1;
     }
     offset +=2;

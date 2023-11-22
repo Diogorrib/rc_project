@@ -51,7 +51,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
         return -1;
     }
 
-    addrlen=sizeof(addr);
+    addrlen=sizeof(struct sockaddr_in);
     /* receive message from AS */
     n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
     if(n==-1) {//error
@@ -136,7 +136,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
 int no_uid_pass(char *command) {
     /* there is no uid or password on the user app */
     if (strlen(uid) != UID || strlen(password) != PASSWORD) {
-        printf("incorrect %s attempt", command);
+        printf("incorrect %s attempt\n", command);
         return 1;
     }
     return 0;
@@ -336,8 +336,10 @@ void show_record(char *first_word){
     memset(msg_received, '\0', SR_RCV+1); // initialize the msg with \0 in every index
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "SRC", aid);
+
     if (udp(buffer, SR_RCV, msg_received) == -1)
         return;
+
     process_sr(msg_received, aid);
 }
 
@@ -349,7 +351,6 @@ int main(int argc, char **argv) {
     /* uid and password initialized as empty string to make requests */
     memset(uid, '\0', UID+1);
     memset(password, '\0', PASSWORD+1);
-    memset(first_word, '\0', 32);
 
     while(1) {
         /* Get a line from the input terminal */
@@ -357,6 +358,7 @@ int main(int argc, char **argv) {
             printf("ERR: Command not valid\n");
             continue;
         }
+        memset(first_word, '\0', 32); // does not save the string from previous fgets call
         sscanf(input_buffer, "%31s", first_word);
     
         /* Compare the first word of each input line with a possible command (action) */
