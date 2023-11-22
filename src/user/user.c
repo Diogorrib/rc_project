@@ -336,10 +336,8 @@ void show_record(char *first_word){
     memset(msg_received, '\0', SR_RCV+1); // initialize the msg with \0 in every index
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "SRC", aid);
-
     if (udp(buffer, SR_RCV, msg_received) == -1)
         return;
-
     process_sr(msg_received, aid);
 }
 

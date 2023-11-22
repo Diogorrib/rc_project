@@ -18,7 +18,6 @@
 
 #define LOGIN_SND (CMD_N_SPACE+UID+PASSWORD+3) // size of message sent to AS including the '\0'
 #define OPEN_SND (CMD_N_SPACE+UID+PASSWORD+NAME+6+6+FNAME+19+8) // size of a part of the message sent to AS including the '\0' (6 is the max digits of some numbers and 19 is the max digits of a long int)
-#define OPEN_SND_NEW "TODO"
 #define CLOSE_SND (CMD_N_SPACE+UID+PASSWORD+AID+4) // size of message sent to AS including the '\0'
 #define MY_SND (CMD_N_SPACE+UID+2)  // size of message sent to AS including the '\0'
 #define SR_SND (CMD_N_SPACE+AID+2)  // size of message sent to AS including the '\0'
@@ -30,5 +29,6 @@
 #define SR_RCV (CMD_N_SPACE+STATUS+UID+NAME+FNAME+6+DATE_TIME+6+7+BID*MAX_BIDS+2+DATE_TIME+6+2) // including the space before the first B (6 is the max digits of some numbers)
 
 #define LST_PRINT (CMD_N_SPACE+11)  // 3 chars plus a space + strlen("not active\n") (worst case)
+#define SR_PRINT (NAME+FNAME+UID+6+DATE_TIME+6+MAX_BIDS*(6+19+DATE_TIME+6+59)+71+32+1) 
 
 #endif // __CONSTANT_H__

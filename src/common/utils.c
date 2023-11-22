@@ -61,12 +61,8 @@ int is_alphanumeric_extra(char *buffer) {
 }
 
 int isDateTime(const char *buffer) {
-    struct tm tm;
-    if (strptime(buffer, "%Y-%m-%d %H:%M:%S", &tm) != NULL) {
-        int year = tm.tm_year + 1900;
-        int month = tm.tm_mon + 1;
-        int day = tm.tm_mday;
-
+    int year, month, day, hour, minute, second;
+    if (sscanf(buffer, "%4d-%2d-%2d %2d:%2d:%2d", &year, &month, &day, &hour, &minute, &second) == 6) {
         if (year >= 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31)
             return 1;
     }
