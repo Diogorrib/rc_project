@@ -136,7 +136,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
 int no_uid_pass(char *command) {
     /* there is no uid or password on the user app */
     if (strlen(uid) != UID || strlen(password) != PASSWORD) {
-        printf("incorrect %s attempt\n", command);
+        printf("incorrect %s attempt", command);
         return 1;
     }
     return 0;

@@ -270,7 +270,7 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     size_t offset = (size_t) initial;
 
     /* verify if the first letter is B and the second character is a space */
-    if (msg[offset] != 'B' || msg[offset+1] != ' ' || msg[offset+2] == ' ') 
+    if (msg[offset] != 'B' || msg[offset+1] != ' ' || msg[offset+2] == ' ')
         return 0;
     
     /* verify if bid_uid is valid and if theres is a space next */
@@ -282,11 +282,12 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     /* verify if bid_value is valid and if theres is a space next */
     if (sscanf(msg+offset, "%ld", value) != 1)
         return 0;
+    
     sprintf(ints_to_str, "%ld", *value);
     offset += strlen(ints_to_str) + 1;
     if(msg[offset-1] != ' ' || msg[offset] == ' ')
         return 0;
-
+    
     /* verify if bid_date-time is valid and if theres is a space next */
     memcpy(date, msg+offset, DATE_TIME);
     offset += DATE_TIME+1;
@@ -296,9 +297,10 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     /* verify if bid_time is valid and if theres is a space next */
     if (sscanf(msg+offset, "%d", bid_time) != 1)
         return 0;
+     
     sprintf(ints_to_str, "%d", *bid_time);
     offset += strlen(ints_to_str) + 1;
-    if(msg[offset-1] != ' ' || msg[offset] == ' ')
+    if((msg[offset-1] != ' ' && msg[offset-1] != '\n' )|| msg[offset] == ' ')
         return 0;
 
     return (long) offset;
@@ -406,17 +408,21 @@ int get_bids(char *bids, char *msg, int initial) {
     sprintf(bids, "%s (%s) hosted by %s started with value %d, at %s. Will be open during %d seconds:\n",
             name, fname, host_uid, start_value, start_date, timeactive);
 
+    if (msg[offset-1] == '\n') return 0; // auction has no bids yet and is still active
+
     /* verification of bids (B messages) */
     if(msg[offset] != 'E'){ // there are bids for this asset
         offset = (size_t) get_bids_list(bids, msg, (long) offset);
-        if (offset == 0) return -1;
+        if (offset == 0) {
+            return -1;
+        }
     }
 
-    if (msg[offset] == '\n') return 0; // auction is still active
+    if (msg[offset-1] == '\n') return 0; // auction is still active
 
     /* verify if the first letter is E and the second character is a space */
     if (msg[offset] != 'E' || msg[offset+1] != ' ' || msg[offset+2] == ' ') {
-        printf("%s\n", bids);
+        printf("incorrectt show_record attempt\n");
         return -1;
     }
     offset +=2;
