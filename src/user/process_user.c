@@ -337,26 +337,26 @@ void process_bid(char *msg, char *aid) {
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
     command[CMD_N_SPACE-1] = '\0';
 
-    if(!strcmp(command, "RBD "))
+    if(!strcmp(command, "RBD ") || msg[7] != '\n' || msg[8] != '\0')
         printf("%s", command);
     
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "NOK")) {
         printf("auction %s is not active\n", aid);
     }
 
-    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "NLG")) {
         printf("login is needed to bid on an auction\n");
     }
 
-    else if(!strcmp(status, "ACC") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "ACC")) {
         printf("bid accepted\n");
     }
 
-    else if(!strcmp(status, "REF") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "REF")) {
         printf("bid refused because a larger bid is already been placed previously\n");
     }
 
-    else if(!strcmp(status, "ILG") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "ILG")) {
         printf("user is not allowed to bid in an auction hosted by himself\n");
     }
     else printf("%s", msg);

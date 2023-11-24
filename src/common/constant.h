@@ -27,7 +27,7 @@
 #define OPEN_RCV (CMD_N_SPACE+STATUS+AID+2) // size of message received including the '\0'
 #define CLS_RCV (CMD_N_SPACE+STATUS+1) // size of message received including the '\0'
 #define LST_RCV (7 + MAX_AUCTION * (AID+3)) // 7 initial chars plus MAX * (AID + 1 char(state) and 2 spaces)
-#define SA_RCV (CMD_N_SPACE+STATUS+1) // size of message received including the '\0'
+#define SA_RCV (CMD_N_SPACE+STATUS) // size of message received including the '\0'
 #define BID_RCV (CMD_N_SPACE+STATUS+1) // size of message received including the '\0'
 #define SR_RCV (CMD_N_SPACE+STATUS+UID+NAME+FNAME+6+DATE_TIME+6+7+BID*MAX_BIDS+2+DATE_TIME+6+2) // including the space before the first B (6 is the max digits of some numbers)
 
