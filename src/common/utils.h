@@ -17,18 +17,21 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 /** Get the size of the file, if return is -1 it is possible that fname is not
  * the name of a file or this file does not exist
  */
 int get_file_size(const char *fname, long *fsize);
 
+int delete_file(char *fname);
+
 /** Open and read a file and send it using tcp,
  * return is -1 in case of error
  */
 int send_file(int fd, char *fname);
 
-int receive_file(int fd, char *fname);
+int receive_file(int fd, char *fname, long fsize);
 
 /** Verify if the buffer is only digits
  */

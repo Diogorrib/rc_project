@@ -144,7 +144,6 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
                         freeaddrinfo(res); close(fd); return -1;}
                     else if(nread == 0) break; //closed by peer
                     nleft-=nread; ptr+=nread;}
-    nread=size-nleft;
     if (fname != NULL && fname[0] == '\0') {
         if (process_sa(fd, fname, msg_received) == -1) {
             freeaddrinfo(res); close(fd); return -1;
@@ -274,7 +273,7 @@ void close_auction() {
     memset(buffer, '\0', CLOSE_SND); // initialize the buffer with \0 in every index
     memset(msg_received, '\0', CLS_RCV); // initialize the msg with \0 in every index
     /* Create the message to send to AS */
-    sprintf(buffer, "%s %s %s %s\n", "CLS", uid, password, aid);
+    sprintf(buffer, "%s %s %s %s", "CLS", uid, password, aid);
 
     if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) 
         return;

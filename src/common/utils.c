@@ -1,18 +1,20 @@
 #include "utils.h"
 
-int get_file_size(const char *fname, long *fsize) {
-    FILE *file = fopen(fname, "rb");
-    if (file == NULL) {
+int get_file_size (const char *fname, long *fsize) {
+    struct stat filestat;
+    int res_stat;
+    res_stat=stat(fname , &filestat) ;
+    if (res_stat == -1 || filestat.st_size == 0) {
         printf("Error opening file\n");
         return -1;
     }
+    *fsize = filestat.st_size;
+    return 0;
+}
 
-    /* Get file size */
-    fseek(file, 0, SEEK_END);
-    *fsize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    fclose(file);
+int delete_file(char *fname) {
+    if (strlen(fname) <= 0) return -1;
+    unlink(fname);
     return 0;
 }
 
@@ -36,8 +38,9 @@ int send_file(int fd, char *fname) {
     return 0;
 }
 
-int receive_file(int fd, char *fname) {
+int receive_file(int fd, char *fname, long fsize) {
     char buffer[512];
+    ssize_t bytes_received, nleft, to_read;
 
     /* Open file for writing */
     FILE *file = fopen(fname, "w");
@@ -46,21 +49,31 @@ int receive_file(int fd, char *fname) {
         return -1;
     }
 
-    /* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO */
-    size_t bytesWritten;
-    while ((bytesWritten = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-        send(fd, buffer, bytesWritten, 0);
+    nleft=fsize; to_read=sizeof(buffer);
+    /* receive message from AS */
+    while (nleft > 0) { // try to read all the file (fsize)
+        if (sizeof(buffer) > nleft) // only read the fsize in this loop
+            to_read = nleft;
+        bytes_received=read(fd,buffer,(size_t)to_read);
+        nleft-=bytes_received;
+        if(bytes_received == -1){//error
+            printf("Can't receive from server AS. Try again\n");
+            fclose(file); delete_file(fname); return -1;
+        } else if(bytes_received == 0) break; //closed by peer
+        fwrite(buffer, 1, (size_t)bytes_received, file); // write in the file what is in the buffer
     }
-
-    // if error close and delete file
-
+    if (nleft) {    // verify if the file was completely read if not delete the file
+        printf("not all data in the file %s was received\n", fname);
+        fclose(file); delete_file(fname);
+        return -1;
+    }
+    bytes_received=read(fd,buffer,1); // read the last \n
+    if(bytes_received == -1 || buffer[0] != '\n') {   //error or not received the last \n
+        printf("Can't receive from server AS. Try again\n");
+        fclose(file); delete_file(fname);
+        return -1;
+    }
     fclose(file);
-    return 0;
-}
-
-int delete_file(char *fname) {
-    if (strlen(fname) <= 0) return -1;
-    unlink(fname);
     return 0;
 }
 

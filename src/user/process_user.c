@@ -546,8 +546,8 @@ int process_sa(int fd, char *fname, char *msg) {
         printf("%s\n", msg);
         if (get_fname_fsize(fd, fname, &fsize) == -1)
             return -1;
-        /* if (receive_file(fd, fname) == -1)
-            return -1; */
+        if (receive_file(fd, fname, fsize) == -1)
+            return -1;
         printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
     }
     else printf("%s", msg);
