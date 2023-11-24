@@ -1,2 +1,7 @@
-**.o
-**.exe
+**/*.o
+**/*.exe
+**/*.txt
+**/*.jpg
+**/*.png
+AS
+user
