@@ -72,13 +72,13 @@ long get_bids_list(char *bids, char *msg, long offset);
 
 int get_bids(char *bids, char *msg, int initial);
 
-void process_sr(char *msg, char *aid);
-
-
-
-
 int get_fname_fsize(int fd, char *fname, long *fsize);
 
 int process_sa(int fd, char *fname, char *msg);
+
+void process_bid(char *msg, char *aid);
+
+void process_sr(char *msg, char *aid);
+
 
 #endif // __PROCESS_USER_H__

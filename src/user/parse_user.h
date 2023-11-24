@@ -19,4 +19,8 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
  */
 int confirm_aid_input(char *buffer, char *cmd, char *aid);
 
+/** If command plus aid plus the bid_value input is not correct return is -1
+ */
+int confirm_bid_input(char *buffer, char *cmd, char *aid, char *bid_value);
+
 #endif // __PARSE_USER_H__

@@ -129,3 +129,58 @@ int confirm_aid_input(char *buffer, char *cmd, char *aid) {
     }
     return 0;
 }
+
+int confirm_bid_input(char *buffer, char *cmd, char *aid, char *bid_value) {
+    size_t cmd_size = strlen(cmd)+1; // cmd including the space
+
+    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
+    memset(bid_value, '\0', 19+1); // initialize the bid_value with \0 in every index
+
+    sscanf(buffer+cmd_size, "%3s", aid);
+    sscanf(buffer+cmd_size+AID+1, "%19s", bid_value);
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != cmd_size+AID+strlen(bid_value)+2) {
+        printf("incorrect %s attempt\n", cmd);
+        return -1;
+    }
+
+    /* verify if the string has only one space between the command and the aid and that the aid isn't negative */
+    if(buffer[cmd_size-1] != ' ' || buffer[cmd_size] == '-' || buffer[cmd_size] == ' ') {
+        printf("incorrect %s attempt\n", cmd);
+        return -1;
+    }
+
+    /* verify if the aid has the correct size */
+    if(strlen(aid) != AID) {
+        printf("incorrect %s attempt\n", cmd);
+        return -1;
+    }
+
+    /* verify if the aid is only digits */
+    if (!is_numeric(aid) || !is_numeric(bid_value)) {
+        printf("incorrect %s attempt\n", cmd);
+        return -1;
+    }
+
+    /* verify if the aid despite being a digit it's an invalid one */
+    if(aid[0] == '0' && aid[1] == '0' && aid[2] == '0') {
+        printf("incorrect identifier\n");
+        return -1;
+    }
+
+    /* verify is there's only one space between aid and bid_value and that the bid_value isn't negative */
+    if(buffer[cmd_size+AID] != ' ' || buffer[cmd_size+AID+1] == '-' || buffer[cmd_size+AID+1] == ' ') {
+        printf("incorrect %s attempt\n", cmd);
+        return -1;
+    }    
+
+    /* verify is there's only one space between aid and bid_value and that the bid_value isn't negative */
+    if(buffer[cmd_size+AID+strlen(bid_value)+1] != '\n' || buffer[cmd_size+AID+strlen(bid_value)+2] != '\0') {
+        printf("iAncorrect %s attempt\n", cmd);
+        return -1;
+    }    
+
+    return 0;
+}
+

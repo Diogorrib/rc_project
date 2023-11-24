@@ -265,6 +265,103 @@ void process_mb(char *msg) {
     else printf("%s", msg);
 }
 
+int get_fname_fsize(int fd, char *fname, long *fsize) {
+    char aux;
+    ssize_t nread;
+    int offset = 0;
+    int first_loop = 1;
+    *fsize = 0;
+
+    /* receive message from AS */
+    while(1) {
+        nread=read(fd,&aux,1); // read only one character
+        if(nread == -1) {   //error
+            printf("Can't receive from server AS. Try again\n");
+            return -1;
+        } else if(nread == 0) break; //closed by peer
+              
+        if (first_loop) {   /* receive fname */
+            if (offset && aux == ' ') { // fname received
+                first_loop = 0;
+                offset = 0;
+                continue;
+            }
+            if (!isdigit(aux) && !isalpha(aux) && aux != '-' && aux != '_' && aux != '.') {
+                printf("fname not valid\n"); return -1; }
+            if (offset >= FNAME) { printf("fname not valid\n"); return -1; }
+            sprintf(fname+offset, "%c", aux);   // add char to fname
+            offset++;
+        } else {    /* receive fsize */
+            if (offset && aux == ' ')   // fsize received
+                break;
+            if (!isdigit(aux)) { printf("fsize not valid\n"); return -1; }
+            if (offset >= 19) { printf("fsize not valid\n"); return -1; }
+            *fsize = (*fsize)*10 + aux - '0';   // add digit to fsize
+            offset++;
+        }
+    }
+    return 0;
+}
+
+int process_sa(int fd, char *fname, char *msg) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    long fsize;
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+    command[CMD_N_SPACE-1] = '\0';
+
+    if(!strcmp(command, "RSA "))
+        printf("%s", msg);
+    
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("no file to be sent or other problem\n");
+    }
+
+    else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
+        if (get_fname_fsize(fd, fname, &fsize) == -1)
+            return -1;
+        if (receive_file(fd, fname, fsize) == -1)
+            return -1;
+        printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
+    }
+    else printf("%s", msg);
+
+    return 0;
+}
+
+void process_bid(char *msg, char *aid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+    command[CMD_N_SPACE-1] = '\0';
+
+    if(!strcmp(command, "RBD "))
+        printf("%s", command);
+    
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("auction %s is not active\n", aid);
+    }
+
+    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("login is needed to bid on an auction\n");
+    }
+
+    else if(!strcmp(status, "ACC") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("bid accepted\n");
+    }
+
+    else if(!strcmp(status, "REF") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("bid refused because a larger bid is already been placed previously\n");
+    }
+
+    else if(!strcmp(status, "ILG") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("user is not allowed to bid in an auction hosted by himself\n");
+    }
+    else printf("%s", msg);
+}
+
 long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time) {
     char ints_to_str[19]; // max size of an long
     size_t offset = (size_t) initial;
@@ -420,7 +517,7 @@ int get_bids(char *bids, char *msg, int initial) {
             return -1;
         }
     } else
-        sprintf(bids + strlen(bids), "No bids yet for this auction\n");
+        sprintf(bids + strlen(bids), "No bids were made for this auction\n");
 
 
     if (msg[offset-1] == '\n') {
@@ -482,75 +579,18 @@ void process_sr(char *msg, char *aid) {
     }
     else printf("%s", msg);
 }
-// Bids from auction 000 - One (A.txt) hosted by 111111 started with value 1, at 2023-11-19 20:43:44. Will be open during 7200 seconds:\n
-// uid: 222222 bid_value: 10 time_of_bid: 2023-11-19 21:01:49 time_since_start: 1085 seconds\n
-// Ended at 2023-11-19 21:24:10, opened for 2426 seconds.\n
 
-/** Bids from auction aid - [nome da auction ;  (file name)] hosted by UID started with value y, at date_time. Will be open during x seconds:\n
-    [uid: %s bid_value: %s time_of_bid: YYYY-MM-DD hh:mm:ss time_since_start: x seconds\n]*
-    Ended at date_time, opened for x seconds.\n
- */
+/*---------------------- MESSAGE TO BE SENT FOR THE USER APLICATION WHEN THE USER MAKES A REQUEST THE RECORD OF AN AUCTION ----------------------*/
+/*                                                                                                                                               */
+/* GENERAL CASE:                                                                                                                                 */ 
+/* Bids from auction aid - [nome da auction ;  (file name)] hosted by UID started with value y, at date_time. Will be open during x seconds:\n   */
+/* [uid: %s bid_value: %s time_of_bid: YYYY-MM-DD hh:mm:ss time_since_start: x seconds\n]                                                        */
+/* Ended at date_time, opened for x seconds.\n                                                                                                   */
+/*                                                                                                                                               */
+/* EXAMPLE:                                                                                                                                      */
+/* Bids from auction 000 - One (A.txt) hosted by 111111 started with value 1, at 2023-11-19 20:43:44. Will be open during 7200 seconds:\n        */
+/* uid: 222222 bid_value: 10 time_of_bid: 2023-11-19 21:01:49 time_since_start: 1085 seconds\n                                                   */
+/* Ended at 2023-11-19 21:24:10, opened for 2426 seconds.\n                                                                                      */
+/*                                                                                                                                               */
+/*---------------------- MESSAGE TO BE SENT FOR THE USER APLICATION WHEN THE USER MAKES A REQUEST THE RECORD OF AN AUCTION ----------------------*/
 
-int get_fname_fsize(int fd, char *fname, long *fsize) {
-    char aux;
-    ssize_t nread;
-    int offset = 0;
-    int first_loop = 1;
-    *fsize = 0;
-
-    /* receive message from AS */
-    while(1) {
-        nread=read(fd,&aux,1); // read only one character
-        if(nread == -1) {   //error
-            printf("Can't receive from server AS. Try again\n");
-            return -1;
-        } else if(nread == 0) break; //closed by peer
-              
-        if (first_loop) {   /* receive fname */
-            if (offset && aux == ' ') { // fname received
-                first_loop = 0;
-                offset = 0;
-                continue;
-            }
-            if (!isdigit(aux) && !isalpha(aux) && aux != '-' && aux != '_' && aux != '.') {
-                printf("fname not valid\n"); return -1; }
-            if (offset >= FNAME) { printf("fname not valid\n"); return -1; }
-            sprintf(fname+offset, "%c", aux);   // add char to fname
-            offset++;
-        } else {    /* receive fsize */
-            if (offset && aux == ' ')   // fsize received
-                break;
-            if (!isdigit(aux)) { printf("fsize not valid\n"); return -1; }
-            if (offset >= 19) { printf("fsize not valid\n"); return -1; }
-            *fsize = (*fsize)*10 + aux - '0';   // add digit to fsize
-            offset++;
-        }
-    }
-    return 0;
-}
-
-int process_sa(int fd, char *fname, char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    long fsize;
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-
-    if(strcmp(command, "RSA "))
-        printf("%s", msg);
-    
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
-        printf("no file to be sent or other problem\n");
-
-    else if(!strcmp(status, "OK ") && msg[7] != ' ') {
-        printf("%s\n", msg);
-        if (get_fname_fsize(fd, fname, &fsize) == -1)
-            return -1;
-        if (receive_file(fd, fname, fsize) == -1)
-            return -1;
-        printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
-    }
-    else printf("%s", msg);
-
-    return 0;
-}

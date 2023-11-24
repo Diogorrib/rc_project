@@ -362,7 +362,27 @@ void show_asset(char *first_word){
         return;
 }
 
-void bid(char *first_word){ (void)first_word; }
+
+void bid(char *first_word){
+    char msg_received[BID_RCV];
+    char buffer[BID_SND]; 
+    char aid[AID+1], bid_value[20];
+
+    if(confirm_bid_input(input_buffer, first_word, aid, bid_value) == -1){
+        return;
+    }
+
+    if (no_uid_pass("bid")) return;
+
+    /* Create the message to send to AS */
+    sprintf(buffer, "%s %s %s %s %s", "BID", uid, password, aid, bid_value);
+
+    /* process_sa will be called during tcp connection to receive the file */
+    if (tcp(buffer, NULL, BID_RCV-1, msg_received) == -1) 
+        return;
+
+    process_bid(msg_received, aid);
+}
 
 void show_record(char *first_word){
     char msg_received[SR_RCV+1];
