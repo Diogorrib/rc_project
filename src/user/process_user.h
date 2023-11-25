@@ -6,17 +6,20 @@
 void get_cmd_status(char *msg, char * cmd, char *status);
 
 /** Verify if response message from AS is correct, 
- * if login was made return 1, else return 0
+ * if login was made return 1, else return 0.
+ * Gives feedback to the user whether the operation was executed successfully or not
  */
 int process_login(char *msg_received, char *uid);
 
 /** Verify if response message from AS is correct, 
- * if logout was made return 1, else return 0
+ * if logout was made return 1, else return 0.
+ * Gives feedback to the user whether the operation was executed successfully or not
  */
 int process_logout(char *msg, const char *uid);
 
 /** Verify if response message from AS is correct, 
- * if logout was made return 1, else return 0
+ * if logout was made return 1, else return 0.
+ * Gives feedback to the user whether the operation was executed successfully or not
  */
 int process_unregister(char *msg, const char *uid);
 

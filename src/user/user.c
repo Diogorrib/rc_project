@@ -5,7 +5,7 @@
 char *as_ip = DEFAULT_IP;
 char *as_port = DEFAULT_PORT;
 char uid[UID+1], password[PASSWORD+1];
-char input_buffer[1024];
+char input_buffer[BUFFER_512];
 int logged_in = 0;  // if logged in 1, if not logged in 0
 
 void filter_input(int argc, char **argv) {
@@ -75,7 +75,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
         printf("Can't receive from server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
-    
+
     freeaddrinfo(res);
     close(fd);
     return 0;
@@ -126,12 +126,12 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
                     nleft-=nwritten; ptr+=nwritten;}  
 
     if (fname != NULL && fname[0] != '\0') {
-        if (send_file(fd, fname) == -1) {
+        if (send_file(fd, fname) == -1) {   /* send file to AS */
             freeaddrinfo(res); close(fd); return -1;
         }
     }
-    ptr = "\n"; /* send \n to AS */
-    nwritten=write(fd,ptr,1);
+    /* send \n to AS */
+    ptr = "\n"; nwritten=write(fd,ptr,1);
     if(nwritten <= 0) {//error
         printf("Can't send to server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
@@ -149,7 +149,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
             freeaddrinfo(res); close(fd); return -1;
         }
     }
-    
+
     freeaddrinfo(res);
     close(fd);
     return 0;
@@ -183,8 +183,10 @@ void login() {
         return;
     }
 
-    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
-    memset(msg_received, '\0', LOGIN_RCV); // initialize the msg with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', LOGIN_SND);
+    memset(msg_received, '\0', LOGIN_RCV);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "LIN", aux_uid, aux_pass);
 
@@ -201,9 +203,11 @@ void logout() {
 
     if (confirm_only_cmd_input(input_buffer, "logout") == -1)
         return;
-    
-    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
-    memset(msg_received, '\0', LOGIN_RCV); // initialize the msg with \0 in every index
+
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', LOGIN_SND);
+    memset(msg_received, '\0', LOGIN_RCV);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "LOU", uid, password);
 
@@ -221,8 +225,10 @@ void unregister() {
     if (confirm_only_cmd_input(input_buffer, "unregister") == -1)
         return;
 
-    memset(buffer, '\0', LOGIN_SND); // initialize the buffer with \0 in every index
-    memset(msg_received, '\0', LOGIN_RCV); // initialize the msg with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', LOGIN_SND);
+    memset(msg_received, '\0', LOGIN_RCV);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "UNR", uid, password);
 
@@ -248,8 +254,10 @@ void open_auction() {
     if (get_file_size(fname, &fsize) == -1)
         return;
     
-    memset(msg_received, '\0', OPEN_RCV); // initialize the msg with \0 in every index
-    memset(buffer, '\0', OPEN_SND); // initialize the buffer with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(msg_received, '\0', OPEN_RCV);
+    memset(buffer, '\0', OPEN_SND);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %d %d %s %ld ",
             "OPA", uid, password, name, start_value, timeactive, fname, fsize);
@@ -270,8 +278,10 @@ void close_auction() {
 
     if (no_uid_pass("close")) return;
 
-    memset(buffer, '\0', CLOSE_SND); // initialize the buffer with \0 in every index
-    memset(msg_received, '\0', CLS_RCV); // initialize the msg with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', CLOSE_SND);
+    memset(msg_received, '\0', CLS_RCV);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s", "CLS", uid, password, aid);
 
@@ -354,6 +364,7 @@ void show_asset(char *first_word){
     memset(buffer, '\0', SHOW_SND);
     memset(msg_received, '\0', SA_RCV);
     memset(fname, '\0', FNAME+1);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s", "SAS", aid);
 
@@ -392,8 +403,10 @@ void show_record(char *first_word){
     if (confirm_aid_input(input_buffer, first_word, aid) == -1)
         return;
 
-    memset(buffer, '\0', SHOW_SND); // initialize the buffer with \0 in every index
-    memset(msg_received, '\0', SR_RCV+1); // initialize the msg with \0 in every index
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', SHOW_SND);
+    memset(msg_received, '\0', SR_RCV+1);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "SRC", aid);
 
@@ -404,8 +417,8 @@ void show_record(char *first_word){
 }
 
 int main(int argc, char **argv) {
-    char first_word[32];
-    
+    char first_word[FIRST_WORD];
+
     filter_input(argc, argv);
 
     /* uid and password initialized as empty string to make requests */
@@ -418,9 +431,9 @@ int main(int argc, char **argv) {
             printf("ERR: Command not valid\n");
             continue;
         }
-        memset(first_word, '\0', 32); // does not save the string from previous fgets call
+        memset(first_word, '\0', FIRST_WORD); // does not save the string from previous fgets call
         sscanf(input_buffer, "%31s", first_word);
-    
+
         /* Compare the first word of each input line with a possible command (action) */
         if (!strcmp("login", first_word))
             login();
