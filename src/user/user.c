@@ -292,7 +292,7 @@ void close_auction() {
 }
 
 void myauctions(char *first_word){
-    char msg_received[LST_RCV+1];
+    char msg_received[LST_RCV];
     char buffer[MY_SND];
 
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
@@ -302,7 +302,7 @@ void myauctions(char *first_word){
 
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', MY_SND);
-    memset(msg_received, '\0', LST_RCV+1);
+    memset(msg_received, '\0', LST_RCV);
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "LMA", uid);
@@ -313,7 +313,7 @@ void myauctions(char *first_word){
 }
 
 void mybids(char *first_word){ 
-    char msg_received[LST_RCV+1];
+    char msg_received[LST_RCV];
     char buffer[MY_SND];
 
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
@@ -323,7 +323,7 @@ void mybids(char *first_word){
 
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', MY_SND);
-    memset(msg_received, '\0', LST_RCV+1);
+    memset(msg_received, '\0', LST_RCV);
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "LMB", uid);
@@ -334,7 +334,7 @@ void mybids(char *first_word){
 }
 
 void list(char *first_word) {
-    char msg_received[LST_RCV+1];
+    char msg_received[LST_RCV];
     char buffer[CMD_N_SPACE+1];
 
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
@@ -342,7 +342,7 @@ void list(char *first_word) {
 
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', CMD_N_SPACE+1);
-    memset(msg_received, '\0', LST_RCV+1);
+    memset(msg_received, '\0', LST_RCV);
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s\n", "LST");
@@ -377,7 +377,7 @@ void show_asset(char *first_word){
 void bid(char *first_word){
     char msg_received[BID_RCV];
     char buffer[BID_SND]; 
-    char aid[AID+1], bid_value[20];
+    char aid[AID+1], bid_value[MAX_4_LONG+1];
 
     if(confirm_bid_input(input_buffer, first_word, aid, bid_value) == -1){
         return;
@@ -385,18 +385,21 @@ void bid(char *first_word){
 
     if (no_uid_pass("bid")) return;
 
+    /* initialize strings with \0 in every index */
+    memset(buffer, '\0', BID_SND);
+    memset(msg_received, '\0', BID_RCV);
+
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %s", "BID", uid, password, aid, bid_value);
 
-    /* process_sa will be called during tcp connection to receive the file */
-    if (tcp(buffer, NULL, BID_RCV-1, msg_received) == -1) 
+    if (tcp(buffer, NULL, BID_RCV, msg_received) == -1) 
         return;
 
     process_bid(msg_received, aid);
 }
 
 void show_record(char *first_word){
-    char msg_received[SR_RCV+1];
+    char msg_received[SR_RCV];
     char buffer[SHOW_SND];
     char aid[AID+1];
 
@@ -405,7 +408,7 @@ void show_record(char *first_word){
 
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', SHOW_SND);
-    memset(msg_received, '\0', SR_RCV+1);
+    memset(msg_received, '\0', SR_RCV);
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "SRC", aid);

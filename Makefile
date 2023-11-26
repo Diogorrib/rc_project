@@ -68,4 +68,7 @@ clean:
 clean-data:
 	rm -rf data_dir
 
+clean-showasset:
+	rm -f *.txt *.png *.jpg
+
 #valgrind --leak-check=full ./user

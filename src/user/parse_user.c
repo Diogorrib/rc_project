@@ -134,7 +134,7 @@ int confirm_bid_input(char *buffer, char *cmd, char *aid, char *bid_value) {
     size_t cmd_size = strlen(cmd)+1; // cmd including the space
 
     memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
-    memset(bid_value, '\0', 19+1); // initialize the bid_value with \0 in every index
+    memset(bid_value, '\0', MAX_4_LONG+1); // initialize the bid_value with \0 in every index
 
     sscanf(buffer+cmd_size, "%3s", aid);
     sscanf(buffer+cmd_size+AID+1, "%19s", bid_value);

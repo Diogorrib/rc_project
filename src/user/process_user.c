@@ -149,7 +149,7 @@ void process_close(char *msg, char *aid, const char *uid) {
 }
 
 void append_auction(char *string, char *auction) {
-    char aux[LST_PRINT+1]; // 3 digits + " not active\n" (worst case) + '\0'
+    char aux[LST_PRINT+1]; // worst case + '\0'
     
     memcpy(aux, auction, AID+1); // AID + 1 space
     if (auction[AID+1] == '0') {
@@ -295,7 +295,7 @@ int get_fname_fsize(int fd, char *fname, long *fsize) {
             if (offset && aux == ' ')   // fsize received
                 break;
             if (!isdigit(aux)) { printf("fsize not valid\n"); return -1; }
-            if (offset >= 19) { printf("fsize not valid\n"); return -1; }
+            if (offset >= MAX_4_LONG) { printf("fsize not valid\n"); return -1; }
             *fsize = (*fsize)*10 + aux - '0';   // add digit to fsize
             offset++;
         }
@@ -363,8 +363,11 @@ void process_bid(char *msg, char *aid) {
 }
 
 long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time) {
-    char ints_to_str[19]; // max size of an long
+    char ints_to_str[MAX_4_LONG+1]; // max size of an long
     size_t offset = (size_t) initial;
+
+    memset(uid, '\0', UID+1);
+    memset(date, '\0', DATE_TIME+1);
 
     /* verify if the first letter is B and the second character is a space */
     if (msg[offset] != 'B' || msg[offset+1] != ' ' || msg[offset+2] == ' ')
@@ -385,7 +388,7 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     if(msg[offset-1] != ' ' || msg[offset] == ' ')
         return 0;
     
-    /* verify if bid_date-time is valid and if theres is a space next */
+    /* verify if bid_date-time is valid and if there is a space next */
     memcpy(date, msg+offset, DATE_TIME);
     offset += DATE_TIME+1;
     if (!isDateTime(date) || msg[offset-1] != ' ' || msg[offset] == ' ' || msg[offset] == '-')
@@ -430,7 +433,7 @@ long get_bids_list(char *bids, char *msg, long offset) {
 int get_bids(char *bids, char *msg, int initial) {
     char host_uid[UID+1], name[NAME+1], fname[FNAME+1], start_date[DATE_TIME+1], end_date[DATE_TIME+1];
     int start_value, timeactive;
-    char ints_to_str[7];
+    char ints_to_str[MAX_4_SOME_INTS+1];
     size_t offset = (size_t) initial;
     
     /* initialize strings with \0 in every index */
@@ -579,18 +582,3 @@ void process_sr(char *msg, char *aid) {
     }
     else printf("%s", msg);
 }
-
-/*---------------------- MESSAGE TO BE SENT FOR THE USER APLICATION WHEN THE USER MAKES A REQUEST THE RECORD OF AN AUCTION ----------------------*/
-/*                                                                                                                                               */
-/* GENERAL CASE:                                                                                                                                 */ 
-/* Bids from auction aid - [nome da auction ;  (file name)] hosted by UID started with value y, at date_time. Will be open during x seconds:\n   */
-/* [uid: %s bid_value: %s time_of_bid: YYYY-MM-DD hh:mm:ss time_since_start: x seconds\n]                                                        */
-/* Ended at date_time, opened for x seconds.\n                                                                                                   */
-/*                                                                                                                                               */
-/* EXAMPLE:                                                                                                                                      */
-/* Bids from auction 000 - One (A.txt) hosted by 111111 started with value 1, at 2023-11-19 20:43:44. Will be open during 7200 seconds:\n        */
-/* uid: 222222 bid_value: 10 time_of_bid: 2023-11-19 21:01:49 time_since_start: 1085 seconds\n                                                   */
-/* Ended at 2023-11-19 21:24:10, opened for 2426 seconds.\n                                                                                      */
-/*                                                                                                                                               */
-/*---------------------- MESSAGE TO BE SENT FOR THE USER APLICATION WHEN THE USER MAKES A REQUEST THE RECORD OF AN AUCTION ----------------------*/
-

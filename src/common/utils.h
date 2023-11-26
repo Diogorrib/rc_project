@@ -24,6 +24,8 @@
  */
 int get_file_size(const char *fname, long *fsize);
 
+/** Delete a file, return -1 if an error occurs
+ */
 int delete_file(char *fname);
 
 /** Open and read a file and send it using tcp,
@@ -31,6 +33,10 @@ int delete_file(char *fname);
  */
 int send_file(int fd, char *fname);
 
+/** Open a file and while the file is not completely written,
+ * writes to the file what is received using tcp,
+ * return is -1 in case of error and file is also deleted
+ */
 int receive_file(int fd, char *fname, long fsize);
 
 /** Verify if the buffer is only digits
