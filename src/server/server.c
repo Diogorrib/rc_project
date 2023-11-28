@@ -17,5 +17,8 @@ void filter_input(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+
     filter_input(argc, argv);
+
+    return 0;
 }

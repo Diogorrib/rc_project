@@ -470,4 +470,5 @@ int main(int argc, char **argv) {
         else
             printf("ERR: Command '%s' not valid\n", first_word);
     }
+    return 0;
 }

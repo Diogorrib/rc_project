@@ -456,7 +456,7 @@ int get_bids(char *bids, char *msg, int initial) {
     sscanf(msg+offset, "%10s", name);
     offset += strlen(name)+1;   // advance string
     /* verify if the string has the correct size is only letters and numbers and if spaces are placed correctly */
-    if(strlen(name) > NAME || !is_alphanumeric(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
+    if(strlen(name) > NAME || !is_alphanumeric_extra(name) || msg[offset-1] != ' ' || msg[offset] == ' ') {
         printf("incorrect show_record attempt\n");
         return -1;
     }
