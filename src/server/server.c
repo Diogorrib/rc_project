@@ -2,6 +2,7 @@
 
 int verbose_mode = 0;   // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
+int udp_timeout = 5, tcp_timeout = 10;
 
 void filter_input(int argc, char **argv) {
     if (argc > 1) // only one argument no need for updates
@@ -19,21 +20,17 @@ void filter_input(int argc, char **argv) {
 void udp() {
     fd_set inputs, testfds;
     struct timeval timeout;
-
-    int out_fds,errcode;
-    ssize_t ret, idk;
-
-    char prt_str[90];
-
+    int fd,out_fds,errcode;
+    ssize_t nread,nwritten,n;
+    char ptr[100];
     struct addrinfo hints, *res;
-    struct sockaddr_in udp_useraddr;
+    struct sockaddr_in addr;
     socklen_t addrlen;
-    int fd;
 
-    char host[300], service[1200];
+    (void)nwritten;
+    (void)n;
 
-    (void)idk;
-
+    char host[300], service[1200];  // TOREMOVE
 
 // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -41,59 +38,48 @@ void udp() {
     hints.ai_socktype=SOCK_DGRAM;
     hints.ai_flags=AI_PASSIVE|AI_NUMERICSERV;
 
-    if((errcode=getaddrinfo(NULL,as_port,&hints,&res))!=0)
-        exit(1);// On error
+    errcode=getaddrinfo(NULL,as_port,&hints,&res);
+    if(errcode != 0) {
+        printf("ERR: UDP: getaddrinfo\n"); return;
+    }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
-    if(fd==-1)
-        exit(1);
-
-    if(bind(fd,res->ai_addr,res->ai_addrlen)==-1)
-    {
-        sprintf(prt_str,"Bind error UDP server\n");
-        idk = write(1,prt_str,strlen(prt_str));
-        exit(1);// On error
+    if(fd == -1) {
+        printf("ERR: UDP: socket\n"); return;
     }
-    if(res!=NULL)
-        freeaddrinfo(res);
+
+    if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
+        printf("ERR: UDP: bind\n"); close(fd); return;
+    }
+    if(res!=NULL) freeaddrinfo(res);
 
     FD_ZERO(&inputs); // Clear input mask
     FD_SET(fd,&inputs); // Set UDP channel on
 
-//    printf("Size of fd_set: %d\n",sizeof(fd_set));
-//    printf("Value of FD_SETSIZE: %d\n",FD_SETSIZE);
+    printf("UDP started\n"); ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    printf("UDP_started\n");
-
-    while(1)
-    {
+    while(1) {
         testfds=inputs; // Reload mask
-//        printf("testfds byte: %d\n",((char *)&testfds)[0]); // Debug
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=5;
+        timeout.tv_sec=udp_timeout;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
-// testfds is now '1' at the positions that were activated
-//        printf("testfds byte: %d\n",((char *)&testfds)[0]); // Debug
-        switch(out_fds)
-        {
+        switch(out_fds) {
             case 0:
                 printf("\n ---------------Timeout event-----------------\n");
                 break;
             case -1:
-                perror("select");
-                exit(1);
+                printf("ERR: UDP: select\n");
+                freeaddrinfo(res); close(fd); return;
             default:
-                if(FD_ISSET(fd,&testfds))
-                {
-                    addrlen = sizeof(udp_useraddr);
-                    ret=recvfrom(fd,prt_str,80,0,(struct sockaddr *)&udp_useraddr,&addrlen);
-                    if(ret>0)
-                    {
-                        if(strlen(prt_str)>0)
-                            prt_str[ret-1]=0;
-                        printf("---UDP socket: %s\n",prt_str);
-                        errcode=getnameinfo( (struct sockaddr *) &udp_useraddr,addrlen,host,sizeof host, service,sizeof service,0);
+                if(FD_ISSET(fd,&testfds)) {
+                    addrlen = sizeof(addr);
+                    nread=recvfrom(fd,ptr,80,0,(struct sockaddr *)&addr,&addrlen);
+                    if(nread>0) {
+                        if(strlen(ptr)>0)
+                            ptr[nread-1]=0;
+                        printf("---UDP socket: %s\n",ptr);
+                        errcode=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);
                         if(errcode==0)
                             printf("       Sent by [%s:%s]\n",host,service);
 
@@ -108,20 +94,16 @@ void udp() {
 void tcp() {
     fd_set inputs, testfds;
     struct timeval timeout;
-
-    int out_fds,errcode;
-    ssize_t ret, idk;
-
-    char prt_str[90];
-
+    int fd,n,out_fds;
+    ssize_t nread,nwritten;
+    char ptr[100];
     struct addrinfo hints, *res;
-    struct sockaddr_in tcp_useraddr;
+    struct sockaddr_in addr;
     socklen_t addrlen;
-    int fd;
 
-    char host[300], service[1200];
+    (void)nwritten;
 
-    (void)idk;
+    char host[300], service[1200];  // TOREMOVE
 
 
 // TCP SERVER SECTION
@@ -130,65 +112,57 @@ void tcp() {
     hints.ai_socktype=SOCK_STREAM;
     hints.ai_flags=AI_PASSIVE|AI_NUMERICSERV;
 
-    if((errcode=getaddrinfo(NULL,as_port,&hints,&res))!=0)
-        exit(1);// On error
+    n=getaddrinfo(NULL,as_port,&hints,&res);
+    if(n != 0) {
+        printf("ERR: TCP: getaddrinfo\n"); return;
+    }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
-    if(fd==-1)
-        exit(1);
-
-    if(bind(fd,res->ai_addr,res->ai_addrlen)==-1)
-    {
-        sprintf(prt_str,"Bind error UDP server\n");
-        idk = write(1,prt_str,strlen(prt_str));
-        exit(1);// On error
+    if(fd == -1) {
+        printf("ERR: TCP: socket\n"); return;
     }
-    if(res!=NULL)
-        freeaddrinfo(res);
 
-    if(listen(fd,5) == -1) exit(1);
+    if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
+        printf("ERR: TCP: bind\n"); close(fd); return;
+    }
+    if(res!=NULL) freeaddrinfo(res);
+
+    if(listen(fd,5) == -1) {
+        printf("ERR: TCP: listen\n"); close(fd); return;
+    }
 
     FD_ZERO(&inputs); // Clear input mask
     FD_SET(fd,&inputs); // Set TCP channel on
 
-//    printf("Size of fd_set: %d\n",sizeof(fd_set));
-//    printf("Value of FD_SETSIZE: %d\n",FD_SETSIZE);
-
-    printf("TCP_started\n");
+    printf("TCP started\n"); ///////////////////////////////////////////////////////////////////////////////////////////////
 
     while(1)
     {
         testfds=inputs; // Reload mask
-//        printf("testfds byte: %d\n",((char *)&testfds)[0]); // Debug
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=10;
+        timeout.tv_sec=tcp_timeout;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
-// testfds is now '1' at the positions that were activated
-//        printf("testfds byte: %d\n",((char *)&testfds)[0]); // Debug
-        switch(out_fds)
-        {
+        switch(out_fds) {
             case 0:
                 printf("\n ---------------Timeout event-----------------\n");
                 break;
             case -1:
-                perror("select");
-                exit(1);
+                printf("ERR: UDP: select\n");
+                freeaddrinfo(res); close(fd); return;
             default:
-                if(FD_ISSET(fd,&testfds))
-                {
+                if(FD_ISSET(fd,&testfds)) {
                     int new_fd;
-                    addrlen = sizeof(tcp_useraddr);
-                    if((new_fd=accept(fd, (struct sockaddr*) &tcp_useraddr, &addrlen))==-1)
+                    addrlen = sizeof(addr);
+                    if((new_fd=accept(fd, (struct sockaddr*) &addr, &addrlen))==-1)
                         exit(1);
-                    ret=read(new_fd,prt_str,10);
-                    if(ret>0)
-                    {
-                        if(strlen(prt_str)>0)
-                            prt_str[ret-1]=0;
-                        printf("---TCP socket: %s\n",prt_str);
-                        errcode=getnameinfo( (struct sockaddr *) &tcp_useraddr,addrlen,host,sizeof host, service,sizeof service,0);
-                        if(errcode==0)
+                    nread=read(new_fd,ptr,10);
+                    if(nread>0) {
+                        if(strlen(ptr)>0)
+                            ptr[nread-1]=0;
+                        printf("---TCP socket: %s\n",ptr);
+                        n=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);
+                        if(n==0)
                             printf("       Sent by [%s:%s]\n",host,service);
 
                     }
@@ -217,8 +191,6 @@ int main(int argc, char **argv) {
 
     default: // tcp process
         tcp();
-        break;
     }
-
     return 0;
 }
