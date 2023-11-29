@@ -1,8 +1,8 @@
 #ifndef __CONSTANT_H__
 #define __CONSTANT_H__
 
-#define DEFAULT_PORT "58011"    // 58000 + GN
-#define DEFAULT_IP "tejo.tecnico.ulisboa.pt"
+#define DEFAULT_PORT "58064"    // 58000 + GN
+#define DEFAULT_IP "localhost"
 
 #define BUFFER_512 512
 #define FIRST_WORD 32
