@@ -4,8 +4,11 @@
 #define DEFAULT_PORT "58064"    // 58000 + GN
 #define DEFAULT_IP "localhost"
 
+#define UDP_TIMEOUT 5
+#define TCP_TIMEOUT 10
+
 #define BUFFER_512 512
-#define FIRST_WORD 32
+#define FIRST_WORD 16
 #define MAX_4_SOME_INTS 6   // 6 is the max digits of some numbers
 #define MAX_4_LONG 19       // 19 is the max digits of a long int
 

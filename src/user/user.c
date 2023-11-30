@@ -46,7 +46,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
     }
 
     /* Set send timeout */ 
-    send_timeout.tv_sec = 5; // 5 seconds timeout
+    send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
     send_timeout.tv_usec = 0;
     if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
         printf("Can't connect with the server AS. Try again\n");
@@ -61,7 +61,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
     }
 
     /* Set receive timeout */
-    recv_timeout.tv_sec = 5; // 5 seconds timeout
+    recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
     recv_timeout.tv_usec = 0;
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
         printf("Can't connect with the server AS. Try again\n");
@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
             continue;
         }
         memset(first_word, '\0', FIRST_WORD); // does not save the string from previous fgets call
-        sscanf(input_buffer, "%31s", first_word);
+        sscanf(input_buffer, "%15s", first_word);
 
         /* Compare the first word of each input line with a possible command (action) */
         if (!strcmp("login", first_word))
