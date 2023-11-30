@@ -40,16 +40,16 @@ void udp() {
 
     errcode=getaddrinfo(NULL,as_port,&hints,&res);
     if(errcode != 0) {
-        printf("ERR: UDP: getaddrinfo\n"); return;
+        printf("ERR: UDP: getaddrinfo\n"); exit(1);
     }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        printf("ERR: UDP: socket\n"); return;
+        printf("ERR: UDP: socket\n"); exit(1);
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        printf("ERR: UDP: bind\n"); close(fd); return;
+        printf("ERR: UDP: bind\n"); close(fd); exit(1);
     }
     if(res!=NULL) freeaddrinfo(res);
 
@@ -70,7 +70,7 @@ void udp() {
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
-                freeaddrinfo(res); close(fd); return;
+                freeaddrinfo(res); close(fd); exit(1);
             default:
                 if(FD_ISSET(fd,&testfds)) {
                     addrlen = sizeof(addr);
@@ -79,9 +79,9 @@ void udp() {
                     recv_timeout.tv_usec = 0;
                     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
                         printf("Can't connect with the server AS. Try again\n");
-                        freeaddrinfo(res); close(fd); return;
+                        freeaddrinfo(res); close(fd); exit(1);
                     }
-                    nread=recvfrom(fd,ptr,80,0,(struct sockaddr *)&addr,&addrlen);
+                    nread=recvfrom(fd,ptr,LOGIN_SND,0,(struct sockaddr *)&addr,&addrlen);
                     if(nread>0) {
                         if(strlen(ptr)>0)
                             ptr[nread-1]=0;
@@ -91,13 +91,6 @@ void udp() {
                             printf("       Sent by [%s:%s]\n",host,service);
 
                     }
-                    /* Set send timeout */ 
-                    /* send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-                    send_timeout.tv_usec = 0;
-                    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
-                        printf("Can't connect with the server AS. Try again\n");
-                        freeaddrinfo(res); close(fd); return -1;
-                    } */
                 }
                 
         }
@@ -108,7 +101,7 @@ void udp() {
 
 void tcp() {
     fd_set inputs, testfds;
-    struct timeval timeout;
+    struct timeval timeout,send_timeout,recv_timeout;
     int fd,n,out_fds;
     ssize_t nleft,nread,nwritten;
     char *ptr;
@@ -118,6 +111,7 @@ void tcp() {
     socklen_t addrlen;
 
     (void)nwritten;
+    (void)send_timeout;
 
     char host[300], service[1200];  // TOREMOVE
 
@@ -130,21 +124,21 @@ void tcp() {
 
     n=getaddrinfo(NULL,as_port,&hints,&res);
     if(n != 0) {
-        printf("ERR: TCP: getaddrinfo\n"); return;
+        printf("ERR: TCP: getaddrinfo\n"); exit(1);
     }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        printf("ERR: TCP: socket\n"); return;
+        printf("ERR: TCP: socket\n"); exit(1);
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        printf("ERR: TCP: bind\n"); close(fd); return;
+        printf("ERR: TCP: bind\n"); close(fd); exit(1);
     }
     if(res!=NULL) freeaddrinfo(res);
 
     if(listen(fd,5) == -1) {
-        printf("ERR: TCP: listen\n"); close(fd); return;
+        printf("ERR: TCP: listen\n"); close(fd); exit(1);
     }
 
     FD_ZERO(&inputs); // Clear input mask
@@ -164,22 +158,31 @@ void tcp() {
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
-                freeaddrinfo(res); close(fd); return;
+                freeaddrinfo(res); close(fd); exit(1);
             default:
                 if(FD_ISSET(fd,&testfds)) {
                     int new_fd;
                     addrlen = sizeof(addr);
                     if((new_fd=accept(fd, (struct sockaddr*) &addr, &addrlen))==-1) {
-                        printf("ERR: TCP: accept\n"); close(fd); return;
+                        printf("ERR: TCP: accept\n"); close(fd); exit(1);
                     }
 
                     nleft=80; ptr=buffer;
-                    while (nleft>0){nread=read(new_fd,ptr,(size_t)nleft);
-                                    if(nread == -1){//error
-                                        printf("Can't receive from server AS. Try again\n");
-                                        freeaddrinfo(res); close(new_fd); close(fd); return;}
-                                    else if(nread == 0) break; //closed by peer
-                                    nleft-=nread; ptr+=nread;}
+                    while (nleft>0){
+                        /* Set receive timeout */
+                        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
+                        recv_timeout.tv_usec = 0;
+                        if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+                            printf("Can't connect with the server AS. Try again\n");
+                            freeaddrinfo(res); close(fd); exit(1);
+                        }
+                        nread=read(new_fd,ptr,(size_t)nleft);
+                        if(nread <= 0){
+                            //printf("Can't receive from server AS. Try again\n");
+                            break;
+                        }
+                        nleft-=nread; ptr+=nread;
+                    }
 
                     printf("---TCP socket: %s\n",buffer);
                     n=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);

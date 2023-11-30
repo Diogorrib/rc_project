@@ -1,11 +1,11 @@
 #ifndef __CONSTANT_H__
 #define __CONSTANT_H__
 
-#define DEFAULT_PORT "58064"    // 58000 + GN
-#define DEFAULT_IP "localhost"
+#define DEFAULT_PORT "58011"    // 58000 + GN
+#define DEFAULT_IP "tejo.tecnico.ulisboa.pt"
 
-#define UDP_TIMEOUT 5
-#define TCP_TIMEOUT 10
+#define UDP_TIMEOUT 3
+#define TCP_TIMEOUT 5
 
 #define BUFFER_512 512
 #define FIRST_WORD 16
