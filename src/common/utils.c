@@ -108,3 +108,32 @@ int isDateTime(const char *buffer) {
     }
     return 0;
 }
+
+int verify_directory(const char *dirname) {
+    struct stat info;
+    
+    if (stat(dirname, &info) != 0)
+        return 0;
+    if (S_ISDIR(info.st_mode))
+        return 1;
+    return 0;
+}
+
+int create_file(const char *uid) {
+    char filename[35];
+    FILE *fp;
+    char dirname[15];
+    sprintf(dirname, "USERS/%s", uid);
+    if(!verify_directory(dirname))
+        if (mkdir(dirname, 0700) == -1)
+            return 0;
+    sprintf(filename, "%s/%s_login.txt",dirname,uid) ;
+    fp=fopen (filename, "w");
+    if(fp==NULL){
+        printf("Niggachair\n");
+        return 0;
+    }
+    fprintf(fp, "Logged in\n");
+    fclose(fp);
+    return 1;
+}

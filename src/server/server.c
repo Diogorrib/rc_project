@@ -1,7 +1,72 @@
 #include "server.h"
+#include <sys/wait.h>
 
 int verbose_mode = 0;   // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
+
+void login(char *buffer, char *msg) {
+    char uid[UID+1];
+    char pass[PASSWORD+1];
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != LOGIN_SND-1) {
+        sprintf(msg, "ERR3\n");
+        return;
+    }
+    /* verify if spaces are placed correctly */
+    if(buffer[CMD_N_SPACE+UID] != ' ' || buffer[LOGIN_SND-2] != '\n') {
+        sprintf(msg, "ERR4\n");
+        return;
+    }
+    
+    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
+    memset(pass, '\0', PASSWORD+1); // initialize the pass with \0 in every index
+    memcpy(uid, buffer+CMD_N_SPACE, UID);
+    memcpy(pass, buffer+CMD_N_SPACE+UID+1, PASSWORD);
+
+    printf("%s %s\n", uid, pass);
+
+    /* verify if the uid and pass have the correct sizes */
+    if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
+        sprintf(msg, "ERR5\n");
+        return;
+    }
+    /* verify if the uid is only digits and the pass is only letters and digits */
+    if (!is_numeric(uid) || !is_alphanumeric(pass)) {
+        sprintf(msg, "ERR6\n");
+        return;
+    }
+    
+    create_file(uid);
+}
+
+void parse_udp_buffer(char *buffer, char *msg) {
+    char cmd[CMD_N_SPACE+1];
+    memset(msg, '\0', SR_RCV);
+    if(buffer[LOGIN_SND-1] != '\0') {
+        sprintf(msg, "ERR1\n");
+        return;
+    }
+    memset(cmd, '\0', CMD_N_SPACE+1);
+    memcpy(cmd, buffer, CMD_N_SPACE);
+    /* Compare cmd with the list of possible udp actions */
+    if (!strcmp("LIN ", cmd))
+        login(buffer, msg);
+    /* else if (!strcmp("LOU ", cmd))
+        logout(buffer);
+    else if (!strcmp("UNR ", cmd))
+        unregister(buffer);
+    else if (!strcmp("LMA ", cmd))
+        myauctions(buffer);
+    else if (!strcmp("LMB ", cmd))
+        mybids(buffer);
+    else if (!strcmp("LST ", cmd))
+        list(buffer);
+    else if (!strcmp("SRC ", cmd))
+        show_record(buffer); */
+    else
+        sprintf(msg, "ERR2\n");
+}
 
 void filter_input(int argc, char **argv) {
     if (argc > 1) // only one argument no need for updates
@@ -21,16 +86,15 @@ void udp() {
     struct timeval timeout,send_timeout,recv_timeout;
     int fd,out_fds,errcode;
     ssize_t nread,nwritten,n;
-    char ptr[100];
+    char buffer[LOGIN_SND], msg_sent[SR_RCV];
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
 
-    (void)nwritten;
     (void)n;
     (void)send_timeout;
 
-    char host[300], service[1200];  // TOREMOVE
+    //char host[300], service[1200];  // TOREMOVE
 
 // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -40,16 +104,16 @@ void udp() {
 
     errcode=getaddrinfo(NULL,as_port,&hints,&res);
     if(errcode != 0) {
-        printf("ERR: UDP: getaddrinfo\n"); exit(1);
+        printf("ERR: UDP: getaddrinfo\n"); return;
     }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        printf("ERR: UDP: socket\n"); exit(1);
+        printf("ERR: UDP: socket\n"); return;
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        printf("ERR: UDP: bind\n"); close(fd); exit(1);
+        printf("ERR: UDP: bind\n"); close(fd); return;
     }
     if(res!=NULL) freeaddrinfo(res);
 
@@ -70,27 +134,51 @@ void udp() {
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
-                freeaddrinfo(res); close(fd); exit(1);
+                freeaddrinfo(res); close(fd); return;
             default:
                 if(FD_ISSET(fd,&testfds)) {
-                    addrlen = sizeof(addr);
+                    addrlen=sizeof(addr);
                     /* Set receive timeout */
                     recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
                     recv_timeout.tv_usec = 0;
                     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-                        printf("Can't connect with the server AS. Try again\n");
-                        freeaddrinfo(res); close(fd); exit(1);
+                        printf("ERR: UDP: recv_timeout\n");
+                        freeaddrinfo(res); close(fd); return;
                     }
-                    nread=recvfrom(fd,ptr,LOGIN_SND,0,(struct sockaddr *)&addr,&addrlen);
-                    if(nread>0) {
-                        if(strlen(ptr)>0)
-                            ptr[nread-1]=0;
-                        printf("---UDP socket: %s\n",ptr);
+                    /* Receive message from user */
+                    memset(buffer, '\0', LOGIN_SND);
+                    nread=recvfrom(fd,buffer,LOGIN_SND,0,(struct sockaddr*)&addr,&addrlen);
+                    if(nread == -1) {
+                        printf("ERR: UDP: recvfrom\n");
+                        freeaddrinfo(res); close(fd); return;
+                    }
+                    
+                    parse_udp_buffer(buffer, msg_sent);
+                    
+                    /* Set send timeout */ 
+                    send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
+                    send_timeout.tv_usec = 0;
+                    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+                        printf("ERR: UDP: send_timeout\n");
+                        freeaddrinfo(res); close(fd); return;
+                    }
+                    /* Send message to user */
+                    nwritten=sendto(fd,msg_sent,strlen(msg_sent),0,(struct sockaddr*)&addr,addrlen);
+                    if(nwritten == -1) {
+                        printf("ERR: UDP: sendto\n");
+                        freeaddrinfo(res); close(fd); return;
+                    }
+
+                    
+                    /* if(nread>0) {    // TOREMOVE
+                        if(strlen(buffer)>0)
+                            buffer[nread-1]=0;
+                        printf("---UDP socket: %s\n",buffer);
                         errcode=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);
                         if(errcode==0)
                             printf("       Sent by [%s:%s]\n",host,service);
 
-                    }
+                    } */
                 }
                 
         }
@@ -124,21 +212,21 @@ void tcp() {
 
     n=getaddrinfo(NULL,as_port,&hints,&res);
     if(n != 0) {
-        printf("ERR: TCP: getaddrinfo\n"); exit(1);
+        printf("ERR: TCP: getaddrinfo\n"); return;
     }
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        printf("ERR: TCP: socket\n"); exit(1);
+        printf("ERR: TCP: socket\n"); return;
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        printf("ERR: TCP: bind\n"); close(fd); exit(1);
+        printf("ERR: TCP: bind\n"); close(fd); return;
     }
     if(res!=NULL) freeaddrinfo(res);
 
     if(listen(fd,5) == -1) {
-        printf("ERR: TCP: listen\n"); close(fd); exit(1);
+        printf("ERR: TCP: listen\n"); close(fd); return;
     }
 
     FD_ZERO(&inputs); // Clear input mask
@@ -158,13 +246,13 @@ void tcp() {
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
-                freeaddrinfo(res); close(fd); exit(1);
+                freeaddrinfo(res); close(fd); return;
             default:
                 if(FD_ISSET(fd,&testfds)) {
                     int new_fd;
                     addrlen = sizeof(addr);
-                    if((new_fd=accept(fd, (struct sockaddr*) &addr, &addrlen))==-1) {
-                        printf("ERR: TCP: accept\n"); close(fd); exit(1);
+                    if((new_fd=accept(fd, (struct sockaddr*)&addr, &addrlen))==-1) {
+                        printf("ERR: TCP: accept\n"); close(fd); return;
                     }
 
                     nleft=80; ptr=buffer;
@@ -174,7 +262,7 @@ void tcp() {
                         recv_timeout.tv_usec = 0;
                         if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
                             printf("Can't connect with the server AS. Try again\n");
-                            freeaddrinfo(res); close(fd); exit(1);
+                            freeaddrinfo(res); close(fd); return;
                         }
                         nread=read(new_fd,ptr,(size_t)nleft);
                         if(nread <= 0){
@@ -204,6 +292,14 @@ int main(int argc, char **argv) {
 
     pid_t childPid;
 
+    /* Create main directories */
+    if(!verify_directory("USERS"))
+        if (mkdir("USERS", 0700) == -1)
+            return -1;
+    if(!verify_directory("AUCTIONS"))
+        if (mkdir("AUCTIONS", 0700) == -1)
+            return -1;
+
     switch (childPid = fork()) {
     case -1:
         printf("ERR: creating child process");
@@ -215,6 +311,8 @@ int main(int argc, char **argv) {
 
     default: // tcp process
         tcp();
+        pid_t child_pid = waitpid(-1, NULL, 0); // wait for child process to end
+        (void) child_pid;
     }
     return 0;
 }

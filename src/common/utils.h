@@ -55,4 +55,7 @@ int is_alphanumeric_extra(char *buffer);
  */
 int isDateTime(const char *buffer);
 
+int verify_directory(const char *dirname);
+int create_file(const char *uid);
+
 #endif // __UTILS_H__
