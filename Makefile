@@ -66,9 +66,6 @@ clean:
 	rm -f $(OBJECTS) $(TARGETS) $(TARGET_EXECS)
 
 clean-data:
-	rm -rf data_dir
-
-clean-showasset:
-	rm -f *.txt *.png *.jpg
+	rm -rf USERS AUCTIONS
 
 #valgrind --leak-check=full ./user
