@@ -119,21 +119,26 @@ int verify_directory(const char *dirname) {
     return 0;
 }
 
-int create_file(const char *uid) {
-    char filename[35];
+int verify_file(const char *filename) {
+    struct stat info;
+    if (stat(filename, &info) == 0)
+        return 1;
+    return 0;
+}
+
+
+int create_file(const char *filename, const char *dirname, const char *fdata) {
     FILE *fp;
-    char dirname[15];
-    sprintf(dirname, "USERS/%s", uid);
     if(!verify_directory(dirname))
         if (mkdir(dirname, 0700) == -1)
-            return 0;
-    sprintf(filename, "%s/%s_login.txt",dirname,uid) ;
+            return -1;
     fp=fopen (filename, "w");
     if(fp==NULL){
-        printf("Niggachair\n");
-        return 0;
+        printf("Can't open file %s\n", filename);
+        return -1;
     }
-    fprintf(fp, "Logged in\n");
+    if (fdata != NULL)
+        fprintf(fp, "%s", fdata);
     fclose(fp);
-    return 1;
+    return 0;
 }

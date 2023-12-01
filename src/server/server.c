@@ -1,4 +1,6 @@
 #include "server.h"
+#include "file_creation.h"
+#include "process_server.h"
 #include <sys/wait.h>
 
 int verbose_mode = 0;   // if zero verbose mode is off else is on
@@ -10,12 +12,12 @@ void login(char *buffer, char *msg) {
 
     /* verify if the string has the correct size */
     if (strlen(buffer) != LOGIN_SND-1) {
-        sprintf(msg, "ERR3\n");
+        sprintf(msg, "ERR\n");
         return;
     }
     /* verify if spaces are placed correctly */
     if(buffer[CMD_N_SPACE+UID] != ' ' || buffer[LOGIN_SND-2] != '\n') {
-        sprintf(msg, "ERR4\n");
+        sprintf(msg, "ERR\n");
         return;
     }
     
@@ -24,27 +26,25 @@ void login(char *buffer, char *msg) {
     memcpy(uid, buffer+CMD_N_SPACE, UID);
     memcpy(pass, buffer+CMD_N_SPACE+UID+1, PASSWORD);
 
-    printf("%s %s\n", uid, pass);
-
     /* verify if the uid and pass have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
-        sprintf(msg, "ERR5\n");
+        sprintf(msg, "ERR\n");
         return;
     }
     /* verify if the uid is only digits and the pass is only letters and digits */
     if (!is_numeric(uid) || !is_alphanumeric(pass)) {
-        sprintf(msg, "ERR6\n");
+        sprintf(msg, "ERR\n");
         return;
     }
     
-    create_file(uid);
+    process_login(uid, pass, msg);
 }
 
 void parse_udp_buffer(char *buffer, char *msg) {
     char cmd[CMD_N_SPACE+1];
     memset(msg, '\0', SR_RCV);
     if(buffer[LOGIN_SND-1] != '\0') {
-        sprintf(msg, "ERR1\n");
+        sprintf(msg, "ERR\n");
         return;
     }
     memset(cmd, '\0', CMD_N_SPACE+1);
@@ -65,7 +65,7 @@ void parse_udp_buffer(char *buffer, char *msg) {
     else if (!strcmp("SRC ", cmd))
         show_record(buffer); */
     else
-        sprintf(msg, "ERR2\n");
+        sprintf(msg, "ERR\n");
 }
 
 void filter_input(int argc, char **argv) {
@@ -130,7 +130,7 @@ void udp() {
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                printf("\n ---------------UDP timeout event-----------------\n");
+                //printf("\n ---------------UDP timeout event-----------------\n");
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
@@ -242,7 +242,7 @@ void tcp() {
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                printf("\n ---------------TCP timeout event-----------------\n");
+                //printf("\n ---------------TCP timeout event-----------------\n");
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
