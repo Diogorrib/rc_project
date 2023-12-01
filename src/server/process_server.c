@@ -5,7 +5,7 @@
 
 void process_login(const char *uid, const char *pass, char *msg) {
     char fname[64];
-    char existing_pass[9]; // 8 letters plus '\0' to terminate the string
+    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
     sprintf(fname, "USERS/%s/%s_pass.txt", uid, uid);
 
     if(verify_file(fname)) {
@@ -17,14 +17,15 @@ void process_login(const char *uid, const char *pass, char *msg) {
             return;
         }
         size_t bytesRead = fread(existing_pass, 1, 8, file);
-        if( bytesRead < 8){
+        if(bytesRead < PASSWORD){
             sprintf(msg, "ERR\n");
-            printf("ERR: Failed to read the eigth characters of the password.\n");
+            printf("ERR: Failed to read the 8 characters of the password.\n");
             return;
         }
         // Add null terminator
         existing_pass[bytesRead] = '\0';
-        // if the uid_pass matches password && create login file
+        
+        // if the uid_pass matches password: create login file
         if(!strcmp(existing_pass,pass)){
             if (!create_login(uid)) {
                 sprintf(msg, "ERR\n");
@@ -35,19 +36,15 @@ void process_login(const char *uid, const char *pass, char *msg) {
             return;
         }
         // if uid_pass does not match password
-        if(strcmp(existing_pass,pass)){
-            sprintf(msg, "RLI NOK\n");
-            return;
-        }
-    }
-
-    else{
-        if (!create_login(uid) || !create_password(uid,pass)) {
-            sprintf(msg, "ERR\n");
-            printf("ERR: Failed to create file");
-            return;
-        }
-        sprintf(msg, "RLI REG\n");
+        sprintf(msg, "RLI NOK\n");
         return;
     }
+    // if pass file does not exist: create login and password file
+    if (!create_login(uid) || !create_password(uid,pass)) {
+        sprintf(msg, "ERR\n");
+        printf("ERR: Failed to create file");
+        return;
+    }
+    sprintf(msg, "RLI REG\n");
+    return;
 }

@@ -9,7 +9,7 @@ char input_buffer[BUFFER_512];
 int logged_in = 0;  // if logged in 1, if not logged in 0
 
 void filter_input(int argc, char **argv) {
-    if (argc > 1) // only one argument no need for updates
+    if (argc == 1) // only one argument no need for updates
         return;
     for (int i = 1; i < argc; i++) {
         /* update the ip to use during this user app */

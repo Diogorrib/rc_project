@@ -4,6 +4,9 @@
 #define DEFAULT_PORT "58064"    // 58000 + 64 (group number)
 #define DEFAULT_IP "localhost"
 
+#define NI_MAXHOST 1025
+#define NI_MAXSERV 32
+
 #define UDP_TIMEOUT 3
 #define TCP_TIMEOUT 5
 

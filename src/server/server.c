@@ -3,7 +3,7 @@
 #include "process_server.h"
 #include <sys/wait.h>
 
-int verbose_mode = 0;   // if zero verbose mode is off else is on
+int verbose_mode = 0; // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
 
 void login(char *buffer, char *msg) {
@@ -39,6 +39,18 @@ void login(char *buffer, char *msg) {
     
     process_login(uid, pass, msg);
 }
+void logout(char *buffer, char *msg) { printf("TODO: logout"); (void)buffer; (void)msg; }
+void unregister(char *buffer, char *msg) { printf("TODO: unregister"); (void)buffer; (void)msg; }
+void myauctions(char *buffer, char *msg) { printf("TODO: myauctions"); (void)buffer; (void)msg; }
+void mybids(char *buffer, char *msg) { printf("TODO: mybids"); (void)buffer; (void)msg; }
+void list(char *buffer, char *msg) { printf("TODO: list"); (void)buffer; (void)msg; }
+void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////// UDP /////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void parse_udp_buffer(char *buffer, char *msg) {
     char cmd[CMD_N_SPACE+1];
@@ -52,33 +64,20 @@ void parse_udp_buffer(char *buffer, char *msg) {
     /* Compare cmd with the list of possible udp actions */
     if (!strcmp("LIN ", cmd))
         login(buffer, msg);
-    /* else if (!strcmp("LOU ", cmd))
-        logout(buffer);
+    else if (!strcmp("LOU ", cmd))
+        logout(buffer, msg);
     else if (!strcmp("UNR ", cmd))
-        unregister(buffer);
+        unregister(buffer, msg);
     else if (!strcmp("LMA ", cmd))
-        myauctions(buffer);
+        myauctions(buffer, msg);
     else if (!strcmp("LMB ", cmd))
-        mybids(buffer);
+        mybids(buffer, msg);
     else if (!strcmp("LST ", cmd))
-        list(buffer);
+        list(buffer, msg);
     else if (!strcmp("SRC ", cmd))
-        show_record(buffer); */
+        show_record(buffer, msg);
     else
         sprintf(msg, "ERR\n");
-}
-
-void filter_input(int argc, char **argv) {
-    if (argc > 1) // only one argument no need for updates
-        return;
-    for (int i = 1; i < argc; i++) {
-        /* update the port where AS app is running */
-        if (!strcmp(argv[i], "-p"))
-            as_port = argv[i+1];
-
-        else if (!strcmp(argv[i], "-v"))
-            verbose_mode = 1;
-    }
 }
 
 void udp() {
@@ -90,11 +89,10 @@ void udp() {
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
+    char host[NI_MAXHOST], service[NI_MAXSERV];
 
     (void)n;
     (void)send_timeout;
-
-    //char host[300], service[1200];  // TOREMOVE
 
 // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -152,6 +150,14 @@ void udp() {
                         printf("ERR: UDP: recvfrom\n");
                         freeaddrinfo(res); close(fd); return;
                     }
+
+                    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
+                    if(errcode==0)
+                        request_received(buffer,host,service,verbose_mode);
+                    else {
+                        printf("ERR: UDP: getnameinfo\n");
+                        freeaddrinfo(res); close(fd); return;
+                    }
                     
                     parse_udp_buffer(buffer, msg_sent);
                     
@@ -168,17 +174,6 @@ void udp() {
                         printf("ERR: UDP: sendto\n");
                         freeaddrinfo(res); close(fd); return;
                     }
-
-                    
-                    /* if(nread>0) {    // TOREMOVE
-                        if(strlen(buffer)>0)
-                            buffer[nread-1]=0;
-                        printf("---UDP socket: %s\n",buffer);
-                        errcode=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);
-                        if(errcode==0)
-                            printf("       Sent by [%s:%s]\n",host,service);
-
-                    } */
                 }
                 
         }
@@ -187,22 +182,65 @@ void udp() {
     close(fd);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////// TCP /////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int read_from_tcp(int fd, char *buffer, long to_read) {
+    struct timeval recv_timeout;
+    ssize_t nleft,nread;
+    char *ptr;
+
+    nleft=to_read; ptr=buffer;
+    while (nleft>0) {
+        /* Set receive timeout */
+        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
+        recv_timeout.tv_usec = 0;
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+            printf("ERR: TCP: send timeout\n");
+            return -1;
+        }
+        nread=read(fd,ptr,(size_t)nleft);
+        if(nread <= 0) break;   // closed by user or timeout event
+        nleft-=nread; ptr+=nread;
+    }
+    return 0;
+}
+
+void open_auction(int fd) { (void)fd; printf("TODO: open_auction\n"); }
+void close_auction(int fd) { (void)fd; printf("TODO: close_auction\n"); }
+void show_asset(int fd) { (void)fd; printf("TODO: show_asset\n"); }
+void bid(int fd) { (void)fd; printf("TODO: bid\n"); }
+
+void parse_tcp_buffer(int fd) {
+    char cmd[CMD_N_SPACE+1];
+    memset(cmd, '\0', CMD_N_SPACE+1);
+    if (read_from_tcp(fd, cmd, CMD_N_SPACE) == -1)
+        return;
+
+    /* Compare cmd with the list of possible udp actions */
+    if (!strcmp("OPA ", cmd))
+        open_auction(fd);
+    else if (!strcmp("CLS ", cmd))
+        close_auction(fd);
+    else if (!strcmp("SAS ", cmd))
+        show_asset(fd);
+    else if (!strcmp("BID ", cmd))
+        bid(fd);
+    else
+        printf("ERR: TODO %s\n", cmd);
+}
+
 void tcp() {
     fd_set inputs, testfds;
-    struct timeval timeout,send_timeout,recv_timeout;
-    int fd,n,out_fds;
-    ssize_t nleft,nread,nwritten;
-    char *ptr;
-    char buffer[100];
+    struct timeval timeout;
+    int fd,errcode,out_fds;
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
-
-    (void)nwritten;
-    (void)send_timeout;
-
-    char host[300], service[1200];  // TOREMOVE
-
+    char host[NI_MAXHOST], service[NI_MAXSERV];
 
 // TCP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -210,8 +248,8 @@ void tcp() {
     hints.ai_socktype=SOCK_STREAM;
     hints.ai_flags=AI_PASSIVE|AI_NUMERICSERV;
 
-    n=getaddrinfo(NULL,as_port,&hints,&res);
-    if(n != 0) {
+    errcode=getaddrinfo(NULL,as_port,&hints,&res);
+    if(errcode != 0) {
         printf("ERR: TCP: getaddrinfo\n"); return;
     }
 
@@ -252,31 +290,18 @@ void tcp() {
                     int new_fd;
                     addrlen = sizeof(addr);
                     if((new_fd=accept(fd, (struct sockaddr*)&addr, &addrlen))==-1) {
-                        printf("ERR: TCP: accept\n"); close(fd); return;
+                        printf("ERR: TCP: accept\n"); freeaddrinfo(res); close(fd); return;
                     }
 
-                    nleft=80; ptr=buffer;
-                    while (nleft>0){
-                        /* Set receive timeout */
-                        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-                        recv_timeout.tv_usec = 0;
-                        if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-                            printf("Can't connect with the server AS. Try again\n");
-                            freeaddrinfo(res); close(fd); return;
-                        }
-                        nread=read(new_fd,ptr,(size_t)nleft);
-                        if(nread <= 0){
-                            //printf("Can't receive from server AS. Try again\n");
-                            break;
-                        }
-                        nleft-=nread; ptr+=nread;
-                    }
+                    parse_tcp_buffer(new_fd);
 
-                    printf("---TCP socket: %s\n",buffer);
-                    n=getnameinfo( (struct sockaddr *) &addr,addrlen,host,sizeof host, service,sizeof service,0);
-                    if(n==0)
-                        printf("       Sent by [%s:%s]\n",host,service);
-
+                    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
+                    /* if(errcode==0)
+                        request_received(NULL,host,service,verbose_mode);
+                    else {
+                        printf("ERR: TCP: getnameinfo\n");
+                        close(new_fd); freeaddrinfo(res); close(fd); return;
+                    } */
                     
                     close(new_fd);
                 }
@@ -284,6 +309,26 @@ void tcp() {
     }
     freeaddrinfo(res);
     close(fd);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////// MAIN ////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void filter_input(int argc, char **argv) {
+    if (argc == 1) // only one argument no need for updates
+        return;
+    for (int i = 1; i < argc; i++) {
+        /* update the port where AS app is running */
+        if (!strcmp(argv[i], "-p"))
+            as_port = argv[i+1];
+
+        else if (!strcmp(argv[i], "-v")) {
+            verbose_mode = 1;
+        }
+    }
 }
 
 int main(int argc, char **argv) {

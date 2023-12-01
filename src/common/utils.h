@@ -61,4 +61,6 @@ int verify_file(const char *filename);
 
 int create_file(const char *filename, const char *dirname, const char *fdata);
 
+void request_received(const char *msg, char *host, char *service, int mode);
+
 #endif // __UTILS_H__

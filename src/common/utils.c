@@ -142,3 +142,10 @@ int create_file(const char *filename, const char *dirname, const char *fdata) {
     fclose(fp);
     return 0;
 }
+
+void request_received(const char *msg, char *host, char *service, int mode) {
+    if(mode) {
+        printf("Request: %s", msg);
+        printf("       Sent by IP: %s\tPORT: %s]\n",host,service);
+    }
+}
