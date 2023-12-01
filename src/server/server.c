@@ -1,6 +1,7 @@
 #include "server.h"
 #include "file_creation.h"
 #include "process_server.h"
+#include "parse_server.h"
 #include <sys/wait.h>
 
 int verbose_mode = 0; // if zero verbose mode is off else is on
@@ -10,37 +11,37 @@ void login(char *buffer, char *msg) {
     char uid[UID+1];
     char pass[PASSWORD+1];
 
-    /* verify if the string has the correct size */
-    if (strlen(buffer) != LOGIN_SND-1) {
-        sprintf(msg, "ERR\n");
+    if(confirm_login(buffer, uid, pass, msg) == -1)
         return;
-    }
-    /* verify if spaces are placed correctly */
-    if(buffer[CMD_N_SPACE+UID] != ' ' || buffer[LOGIN_SND-2] != '\n') {
-        sprintf(msg, "ERR\n");
-        return;
-    }
-    
-    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
-    memset(pass, '\0', PASSWORD+1); // initialize the pass with \0 in every index
-    memcpy(uid, buffer+CMD_N_SPACE, UID);
-    memcpy(pass, buffer+CMD_N_SPACE+UID+1, PASSWORD);
-
-    /* verify if the uid and pass have the correct sizes */
-    if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
-        sprintf(msg, "ERR\n");
-        return;
-    }
-    /* verify if the uid is only digits and the pass is only letters and digits */
-    if (!is_numeric(uid) || !is_alphanumeric(pass)) {
-        sprintf(msg, "ERR\n");
-        return;
-    }
     
     process_login(uid, pass, msg);
 }
-void logout(char *buffer, char *msg) { printf("TODO: logout"); (void)buffer; (void)msg; }
-void unregister(char *buffer, char *msg) { printf("TODO: unregister"); (void)buffer; (void)msg; }
+void logout(char *buffer, char *msg) { 
+    char uid[UID+1];
+    char pass[PASSWORD+1];
+
+    /* The message receive from the user is equal to the login comand.   */
+    /* The only diference is the command of the 3 initial letters, so we */
+    /* can use the function confirm_login() here.                        */
+    if(confirm_login(buffer, uid, pass, msg) == -1) 
+        return;
+    
+    process_logout(uid, pass, msg); 
+}
+
+void unregister(char *buffer, char *msg) { 
+     char uid[UID+1];
+    char pass[PASSWORD+1];
+
+    /* The message receive from the user is equal to the login comand.   */
+    /* The only diference is the command of the 3 initial letters, so we */
+    /* can use the function confirm_login() here.                        */
+    if(confirm_login(buffer, uid, pass, msg) == -1) 
+        return;
+    
+    process_unregister(uid, pass, msg); 
+}
+
 void myauctions(char *buffer, char *msg) { printf("TODO: myauctions"); (void)buffer; (void)msg; }
 void mybids(char *buffer, char *msg) { printf("TODO: mybids"); (void)buffer; (void)msg; }
 void list(char *buffer, char *msg) { printf("TODO: list"); (void)buffer; (void)msg; }
