@@ -39,7 +39,7 @@ void unregister(char *buffer, char *msg) {
     if(confirm_login(buffer, uid, pass, msg) == -1) 
         return;
     
-    process_unregister(uid, pass, msg); 
+    process_unregister(uid, pass, msg);
 }
 
 void myauctions(char *buffer, char *msg) { printf("TODO: myauctions"); (void)buffer; (void)msg; }
