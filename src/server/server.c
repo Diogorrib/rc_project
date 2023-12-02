@@ -16,7 +16,8 @@ void login(char *buffer, char *msg) {
     
     process_login(uid, pass, msg);
 }
-void logout(char *buffer, char *msg) { 
+
+void logout(char *buffer, char *msg) {
     char uid[UID+1];
     char pass[PASSWORD+1];
 
@@ -29,7 +30,7 @@ void logout(char *buffer, char *msg) {
     process_logout(uid, pass, msg); 
 }
 
-void unregister(char *buffer, char *msg) { 
+void unregister(char *buffer, char *msg) {
      char uid[UID+1];
     char pass[PASSWORD+1];
 
@@ -204,13 +205,91 @@ int read_from_tcp(int fd, char *buffer, long to_read) {
             return -1;
         }
         nread=read(fd,ptr,(size_t)nleft);
-        if(nread <= 0) break;   // closed by user or timeout event
+        if(nread <= 0) {    // closed by user or timeout event
+            printf("ERR: TCP: did not receive all message\n");
+            return -1;
+        }
         nleft-=nread; ptr+=nread;
     }
     return 0;
 }
 
-void open_auction(int fd) { (void)fd; printf("TODO: open_auction\n"); }
+int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
+    struct timeval recv_timeout;
+    ssize_t nleft,nread;
+    char aux[1], *ptr;
+
+    nleft=to_read; ptr=buffer;
+    while (nleft>0) {
+        /* Set receive timeout */
+        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
+        recv_timeout.tv_usec = 0;
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+            printf("ERR: TCP: send timeout\n");
+            return -1;
+        }
+        nread=read(fd,aux,1);
+        if(nread <= 0) {    // closed by user or timeout event
+            printf("ERR: TCP: did not receive all message\n");
+            return -1;
+        }
+        if (nleft == 1 && aux[0] != ' ') {
+            printf("ERR: TCP: not a space\n"); // last char before the limit need to be a space
+            return -1;
+        }
+        if(aux[0] == ' ') {
+            if (nleft == to_read) {
+                printf("ERR: TCP: empty buffer\n"); // first char is a space
+                return -1;
+            }
+            break; // read a space
+        }
+        memcpy(ptr, aux, 1);
+        nleft-=nread; ptr+=nread;
+    }
+    return 0;
+}
+
+void open_auction(int fd) {
+    char buffer[BUFFER_512];
+    char uid[UID+1], pass[PASSWORD+1], name[NAME+1];
+    char start_time[MAX_4_SOME_INTS+1], time_active[MAX_4_SOME_INTS+1];
+    char fname[FNAME+1];
+    char fsize[8+1]; // max file size is 10MB (10^7 have 8 digits max) TOCHANGE in user
+
+    memset(buffer, '\0', BUFFER_512);
+    if (read_from_tcp(fd, buffer, UID+1+PASSWORD+1) == -1)
+        return;
+    printf("%s...a space\n", buffer);
+
+    memset(name, '\0', NAME+1);
+    if (read_from_tcp_spaces(fd, name, NAME+1) == -1)
+        return;
+    printf("%s...a space\n", name);
+
+    memset(start_time, '\0', MAX_4_SOME_INTS+1);
+    if (read_from_tcp_spaces(fd, start_time, MAX_4_SOME_INTS+1) == -1)
+        return;
+    printf("%s...a space\n", start_time);
+
+    memset(time_active, '\0', MAX_4_SOME_INTS+1);
+    if (read_from_tcp_spaces(fd, time_active, MAX_4_SOME_INTS+1) == -1)
+        return;
+    printf("%s...a space\n", time_active);
+
+    memset(fname, '\0', FNAME+1);
+    if (read_from_tcp_spaces(fd, fname, FNAME+1) == -1)
+        return;
+    printf("%s...a space\n", fname);
+
+    memset(fsize, '\0', 8+1);
+    if (read_from_tcp_spaces(fd, fsize, 8+1) == -1)
+        return;
+    printf("%s...a space\n", fsize);
+    
+    printf("TODO: open_auction\n");
+}
+
 void close_auction(int fd) { (void)fd; printf("TODO: close_auction\n"); }
 void show_asset(int fd) { (void)fd; printf("TODO: show_asset\n"); }
 void bid(int fd) { (void)fd; printf("TODO: bid\n"); }
