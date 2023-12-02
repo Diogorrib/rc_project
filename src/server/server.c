@@ -6,6 +6,7 @@
 
 int verbose_mode = 0; // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
+int aid = 1;
 
 void login(char *buffer, char *msg) {
     char uid[UID+1];
@@ -31,7 +32,7 @@ void logout(char *buffer, char *msg) {
 }
 
 void unregister(char *buffer, char *msg) {
-     char uid[UID+1];
+    char uid[UID+1];
     char pass[PASSWORD+1];
 
     /* The message receive from the user is equal to the login comand.   */
@@ -201,7 +202,7 @@ int read_from_tcp(int fd, char *buffer, long to_read) {
         recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
         recv_timeout.tv_usec = 0;
         if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-            printf("ERR: TCP: send timeout\n");
+            printf("ERR: TCP: read timeout\n");
             return -1;
         }
         nread=read(fd,ptr,(size_t)nleft);
@@ -225,7 +226,7 @@ int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
         recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
         recv_timeout.tv_usec = 0;
         if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-            printf("ERR: TCP: send timeout\n");
+            printf("ERR: TCP: read timeout\n");
             return -1;
         }
         nread=read(fd,aux,1);
@@ -250,65 +251,112 @@ int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
     return 0;
 }
 
-void open_auction(int fd) {
-    char buffer[BUFFER_512];
+int write_to_tcp(int fd, char *buffer) {
+    struct timeval send_timeout;
+    ssize_t nleft,nwritten;
+    char *ptr;
+    struct sigaction act;
+
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+    if (sigaction(SIGPIPE,&act,NULL) == -1) {//error
+        printf("ERR: TCP: sigaction\n");
+        return -1;
+    }
+    nleft=(ssize_t)strlen(buffer); ptr=buffer;
+    while (nleft>0) {
+        /* Set receive timeout */ 
+        send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
+        send_timeout.tv_usec = 0;
+        if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+            printf("ERR: TCP: write timeout\n");
+            return -1;
+        }
+        nwritten=write(fd,ptr,(size_t)nleft);
+        if(nwritten <= 0) {    // closed by user or timeout event
+            printf("ERR: TCP: did not receive all message\n");
+            return -1;
+        }
+        nleft-=nwritten; ptr+=nwritten;
+    }
+    return 0;
+}
+
+void open_auction(int fd, char *buffer) {
     char uid[UID+1], pass[PASSWORD+1], name[NAME+1];
-    char start_time[MAX_4_SOME_INTS+1], time_active[MAX_4_SOME_INTS+1];
+    char start_value[MAX_4_SOME_INTS+1], timeactive[MAX_4_SOME_INTS+1];
     char fname[FNAME+1];
     char fsize[8+1]; // max file size is 10MB (10^7 have 8 digits max) TOCHANGE in user
+    char aid_str[AID+1];
 
-    memset(buffer, '\0', BUFFER_512);
-    if (read_from_tcp(fd, buffer, UID+1+PASSWORD+1) == -1)
+    memset(uid, '\0', UID+1);
+    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
         return;
-    printf("%s...a space\n", buffer);
-
+    memset(pass, '\0', PASSWORD+1);
+    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+        return;
     memset(name, '\0', NAME+1);
     if (read_from_tcp_spaces(fd, name, NAME+1) == -1)
         return;
-    printf("%s...a space\n", name);
-
-    memset(start_time, '\0', MAX_4_SOME_INTS+1);
-    if (read_from_tcp_spaces(fd, start_time, MAX_4_SOME_INTS+1) == -1)
+    memset(start_value, '\0', MAX_4_SOME_INTS+1);
+    if (read_from_tcp_spaces(fd, start_value, MAX_4_SOME_INTS+1) == -1)
         return;
-    printf("%s...a space\n", start_time);
-
-    memset(time_active, '\0', MAX_4_SOME_INTS+1);
-    if (read_from_tcp_spaces(fd, time_active, MAX_4_SOME_INTS+1) == -1)
+    memset(timeactive, '\0', MAX_4_SOME_INTS+1);
+    if (read_from_tcp_spaces(fd, timeactive, MAX_4_SOME_INTS+1) == -1)
         return;
-    printf("%s...a space\n", time_active);
-
     memset(fname, '\0', FNAME+1);
     if (read_from_tcp_spaces(fd, fname, FNAME+1) == -1)
         return;
-    printf("%s...a space\n", fname);
-
     memset(fsize, '\0', 8+1);
     if (read_from_tcp_spaces(fd, fsize, 8+1) == -1)
         return;
-    printf("%s...a space\n", fsize);
+
+    memset(buffer, '\0', OPEN_RCV);
+    if(confirm_open(uid, pass, name, start_value, timeactive, fname, fsize, buffer) == -1) 
+        return;
     
-    printf("TODO: open_auction\n");
+    sprintf(aid_str, "%03d", aid);
+    if(!create_asset(fd, aid_str, fname, fsize)) {
+        sprintf(buffer, "ERR\n");
+        return;
+    }
+
+    if (process_open(uid, pass, name, start_value, timeactive, fname, aid_str, buffer) == 0)
+        aid++;
 }
 
-void close_auction(int fd) { (void)fd; printf("TODO: close_auction\n"); }
-void show_asset(int fd) { (void)fd; printf("TODO: show_asset\n"); }
-void bid(int fd) { (void)fd; printf("TODO: bid\n"); }
+void close_auction(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: close_auction\n"); }
+void show_asset(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: show_asset\n"); }
+void bid(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: bid\n"); }
 
-void parse_tcp_buffer(int fd) {
+void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen) {
     char cmd[CMD_N_SPACE+1];
+    char host[NI_MAXHOST], service[NI_MAXSERV];
+    int errcode;
+
     memset(cmd, '\0', CMD_N_SPACE+1);
+    
     if (read_from_tcp(fd, cmd, CMD_N_SPACE) == -1)
         return;
 
+    memset(buffer, '\0', OPEN_RCV);
+    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
+    if(errcode==0)
+        request_received(cmd,host,service,verbose_mode);
+    else {
+        printf("ERR: TCP: getnameinfo\n");
+        return;
+    }
+
     /* Compare cmd with the list of possible udp actions */
     if (!strcmp("OPA ", cmd))
-        open_auction(fd);
+        open_auction(fd, buffer);
     else if (!strcmp("CLS ", cmd))
-        close_auction(fd);
+        close_auction(fd, buffer);
     else if (!strcmp("SAS ", cmd))
-        show_asset(fd);
+        show_asset(fd, buffer);
     else if (!strcmp("BID ", cmd))
-        bid(fd);
+        bid(fd, buffer);
     else
         printf("ERR: TODO %s\n", cmd);
 }
@@ -320,7 +368,7 @@ void tcp() {
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
-    char host[NI_MAXHOST], service[NI_MAXSERV];
+    char msg_sent[OPEN_RCV];
 
 // TCP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -373,15 +421,9 @@ void tcp() {
                         printf("ERR: TCP: accept\n"); freeaddrinfo(res); close(fd); return;
                     }
 
-                    parse_tcp_buffer(new_fd);
+                    parse_tcp_buffer(new_fd, msg_sent, addr, addrlen);
 
-                    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
-                    /* if(errcode==0)
-                        request_received(NULL,host,service,verbose_mode);
-                    else {
-                        printf("ERR: TCP: getnameinfo\n");
-                        close(new_fd); freeaddrinfo(res); close(fd); return;
-                    } */
+                    write_to_tcp(new_fd, msg_sent);
                     
                     close(new_fd);
                 }
@@ -424,6 +466,15 @@ int main(int argc, char **argv) {
     if(!verify_directory("AUCTIONS"))
         if (mkdir("AUCTIONS", 0700) == -1)
             return -1;
+
+    for(int i = 1; i < 999; i++) {
+        char dirname[20];
+        sprintf(dirname, "AUCTIONS/%03d", i);
+        if(!verify_directory(dirname))
+            break;
+        aid++;
+    }
+    printf("next %03d\n", aid);
 
     switch (childPid = fork()) {
     case -1:

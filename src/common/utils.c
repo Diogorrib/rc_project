@@ -77,21 +77,21 @@ int receive_file(int fd, char *fname, long fsize) {
     return 0;
 }
 
-int is_numeric(char *buffer) {
+int is_numeric(const char *buffer) {
     for (int i = 0; i < strlen(buffer); i++) {
         if (!isdigit(buffer[i])) return 0;
     }
     return 1;    
 }
 
-int is_alphanumeric(char *buffer) {
+int is_alphanumeric(const char *buffer) {
     for (int i = 0; i < strlen(buffer); i++) {
         if (!isdigit(buffer[i]) && !isalpha(buffer[i])) return 0;
     }
     return 1;
 }
 
-int is_alphanumeric_extra(char *buffer) {
+int is_alphanumeric_extra(const char *buffer) {
     for (int i = 0; i < strlen(buffer); i++) {
         if (!isdigit(buffer[i]) && !isalpha(buffer[i]) &&
             buffer[i] != '-' && buffer[i] != '_' && buffer[i] != '.')

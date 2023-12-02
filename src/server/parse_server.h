@@ -3,4 +3,7 @@
 
 int confirm_login(char *buffer, char *uid, char *pass, char *msg);
 
+int confirm_open(const char *uid, const char *pass, const char *start_time, const char *name,
+                const char *time_active, const char *fname, const char *fsize, char *msg);
+
 #endif // __PARSE_SERVER_H__

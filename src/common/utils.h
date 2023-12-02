@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <time.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -41,15 +42,15 @@ int receive_file(int fd, char *fname, long fsize);
 
 /** Verify if the buffer is only digits
  */
-int is_numeric(char *buffer);
+int is_numeric(const char *buffer);
 
 /** Verify if the buffer is only digits and letters
  */
-int is_alphanumeric(char *buffer);
+int is_alphanumeric(const char *buffer);
 
 /** Verify if the buffer is only digits and letters plus '-', '_' and '.'
  */
-int is_alphanumeric_extra(char *buffer);
+int is_alphanumeric_extra(const char *buffer);
 
 /** Verify if the buffer is a date time string
  */

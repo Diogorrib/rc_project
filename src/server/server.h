@@ -43,13 +43,15 @@ void udp();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int read_from_tcp(int fd, char *buffer, long to_read);
+int read_from_tcp_spaces(int fd, char *buffer, int to_read);
+int write_to_tcp(int fd, char *buffer);
 
-void open_auction(int fd);
-void close_auction(int fd);
-void show_asset(int fd);
-void bid(int fd);
+void open_auction(int fd, char *buffer);
+void close_auction(int fd, char *buffer);
+void show_asset(int fd, char *buffer);
+void bid(int fd, char *buffer);
 
-void parse_tcp_buffer(int fd);
+void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen);
 
 void tcp();
 

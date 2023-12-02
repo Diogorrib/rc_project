@@ -79,10 +79,11 @@ void process_logout(const char *uid, const char *pass, char *msg) {
                 sprintf(msg, "RLO OK\n");
                 return;
             }
-            // if uid_pass does not match password or login file does not exist
-            sprintf(msg, "RLO NOK\n");
-            return;
+            
         }
+        // if uid_pass does not match password or login file does not exist
+        sprintf(msg, "RLO NOK\n");
+        return;
     }
     // if the pass file doesn't exist it means that the user is not registered
     sprintf(msg, "RLO UNR\n");
@@ -112,11 +113,53 @@ void process_unregister(const char *uid, const char *pass, char *msg) {
                 sprintf(msg, "RUR OK\n");
                 return;
             }
-            // if uid_pass does not match password or login file does not exist
-            sprintf(msg, "RUR NOK\n");
-            return;
         }
+        // if uid_pass does not match password or login file does not exist
+        sprintf(msg, "RUR NOK\n");
+        return;
     }
     // if the pass file doesn't exist it means that the user is not registered
     sprintf(msg, "RUR UNR\n");
+}
+
+int process_open(const char *uid, const char *pass, const char *name, const char *start_value,
+                const char *timeactive, const char *fname, const char *aid, char *buffer) {
+    char fname_pass[64];
+    char fname_login[64];
+    char fname_asset[64];
+    char dirname[20];
+    char fdata[1024];
+    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(fname_asset, "AUCTIONS/%s/%s", aid, fname);
+    sprintf(dirname, "AUCTIONS/%s", aid);
+
+    if(verify_file(fname_pass)) {
+        if (read_password_file(fname_pass, existing_pass) == -1) {
+            sprintf(buffer, "ERR\n");
+            return -1;
+        }
+        
+        // if the uid_pass matches password: we can delete login file and pass file (if the file exists)
+        if(!strcmp(existing_pass,pass)) {
+            if(verify_file(fname_login)){ // if user is logged in
+                sprintf(fdata, "%s %s %s %s %s ", uid, name, fname, start_value, timeactive);
+                if (!create_open_files(aid, uid, fdata)) {
+                    sprintf(buffer, "ERR\n");
+                    return -1;
+                }
+                sprintf(buffer, "ROA OK %s\n", aid);
+                return 0;
+            }
+            // if login file does not exist
+            delete_file(fname_asset); rmdir(dirname);
+            sprintf(buffer, "ROA NLG\n");
+            return -1;
+        }
+    }
+    // if the pass file doesn't exist or uid_pass does not match password
+    delete_file(fname_asset); rmdir(dirname);
+    sprintf(buffer, "ROA NOK\n");
+    return -1;
 }

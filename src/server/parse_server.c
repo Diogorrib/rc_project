@@ -33,3 +33,22 @@ int confirm_login(char *buffer, char *uid, char *pass, char *msg){
     }
     return 0;
 }
+
+int confirm_open(const char *uid, const char *pass, const char *name, const char *start_value,
+                const char *timeactive, const char *fname, const char *fsize, char *msg) {
+
+    /* verify if the uid and pass have the correct sizes */
+    if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+    /* verify if the uid is only digits and the pass is only letters and digits */
+    if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_alphanumeric_extra(name) ||
+        !is_numeric(start_value) || !is_numeric(timeactive) || !is_alphanumeric_extra(fname) ||
+        !is_numeric(fsize)) {
+        // TODO: verify *.xxx for filename
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+    return 0;
+}

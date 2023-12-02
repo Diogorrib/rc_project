@@ -61,14 +61,21 @@ int create_start(const char *aid, const char *fdata) {
     return 1;
 }
 
-int create_asset(const char *aid, const char *fname, const char *fdata) {
+int create_asset(int fd, const char *aid, const char *fname, const char *fsize) {
     char filepath[64];
     char dirname[20];
     
     sprintf(dirname, "AUCTIONS/%s",aid);
     sprintf(filepath, "%s/%s",dirname,fname);
-    if (create_file(filepath, dirname, fdata) == -1)
+    long size = (long) atoi(fsize);
+    if (create_file(filepath, dirname, NULL) == -1)
         return 0;
+    if (receive_file(fd, filepath, size) == -1) {
+        if (rmdir(dirname) != 0)
+            printf("Directory %s not deleted.\n", dirname);
+        return 0;
+    }
+    
     return 1;
 }
 
@@ -90,6 +97,22 @@ int create_bid_value(const char *aid, const char *value, const char *fdata) {
     sprintf(dirname, "AUCTIONS/%s/BIDS",aid);
     sprintf(filepath, "%s/%s.txt",dirname,value);
     if (create_file(filepath, dirname, fdata) == -1)
+        return 0;
+    return 1;
+}
+
+int create_open_files(const char *aid, const char *uid, char *fdata) {
+    time_t fulltime ;
+    struct tm *current_time;
+    char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
+    time(&fulltime); // Get current time in seconds starting at 1970
+    current_time = gmtime(&fulltime); // Convert time to YYYY-MM-DD HH:MM:SS
+    sprintf(time_str ,"%4d-%02d-%02d %02d:%02d:%02d",
+            current_time->tm_year+1900, current_time->tm_mon+1, current_time->tm_mday,
+            current_time->tm_hour, current_time->tm_min, current_time->tm_sec);
+
+    sprintf(fdata+strlen(fdata), "%s %ld\n", time_str, fulltime);
+    if (!create_hosted(uid, aid) || !create_start(aid, fdata))
         return 0;
     return 1;
 }
