@@ -68,4 +68,7 @@ clean:
 clean-data:
 	rm -rf USERS AUCTIONS
 
+clean-sa:
+	rm -f *.txt *.png *.jpg   
+
 #valgrind --leak-check=full ./user
