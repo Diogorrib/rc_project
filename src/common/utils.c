@@ -1,14 +1,14 @@
 #include "utils.h"
 
 int get_file_size (const char *fname, long *fsize) {
-    struct stat filestat;
+    struct stat file_stat;
     int res_stat;
-    res_stat=stat(fname , &filestat) ;
-    if (res_stat == -1 || filestat.st_size == 0) {
+    res_stat=stat(fname , &file_stat) ;
+    if (res_stat == -1 || file_stat.st_size == 0) {
         printf("Error opening file\n");
         return -1;
     }
-    *fsize = filestat.st_size;
+    *fsize = file_stat.st_size;
     return 0;
 }
 
@@ -18,17 +18,17 @@ int delete_file(char *fname) {
     return 0;
 }
 
-int send_file(int fd, char *fname) {
+/* int send_file(int fd, char *fname) {
     char buffer[512];
 
-    /* Open file for reading */
+    / Open file for reading /
     FILE *file = fopen(fname, "rb");
     if (file == NULL) {
         printf("Error opening file %s for reading\n", fname);
         return -1;
     }
 
-    /* Send file data */
+    / Send file data /
     size_t bytesRead;
     while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
         send(fd, buffer, bytesRead, 0);
@@ -36,7 +36,7 @@ int send_file(int fd, char *fname) {
 
     fclose(file);
     return 0;
-}
+} */
 
 int receive_file(int fd, char *fname, long fsize) {
     char buffer[512];

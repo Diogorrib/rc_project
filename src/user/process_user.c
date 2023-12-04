@@ -295,7 +295,7 @@ int get_fname_fsize(int fd, char *fname, long *fsize) {
             if (offset && aux == ' ')   // fsize received
                 break;
             if (!isdigit(aux)) { printf("fsize not valid\n"); return -1; }
-            if (offset >= MAX_4_LONG) { printf("fsize not valid\n"); return -1; }
+            if (offset >= FSIZE) { printf("fsize not valid\n"); return -1; }
             *fsize = (*fsize)*10 + aux - '0';   // add digit to fsize
             offset++;
         }
@@ -363,7 +363,7 @@ void process_bid(char *msg, char *aid) {
 }
 
 long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time) {
-    char ints_to_str[MAX_4_LONG+1]; // max size of an long
+    char ints_to_str[MAX_4_SOME_INTS+1]; // max size of an long
     size_t offset = (size_t) initial;
 
     memset(uid, '\0', UID+1);

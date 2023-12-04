@@ -285,8 +285,7 @@ int write_to_tcp(int fd, char *buffer) {
 void open_auction(int fd, char *buffer) {
     char uid[UID+1], pass[PASSWORD+1], name[NAME+1];
     char start_value[MAX_4_SOME_INTS+1], timeactive[MAX_4_SOME_INTS+1];
-    char fname[FNAME+1];
-    char fsize[8+1]; // max file size is 10MB (10^7 have 8 digits max) TOCHANGE in user
+    char fname[FNAME+1], fsize[FSIZE+1];
     char aid_str[AID+1];
 
     memset(uid, '\0', UID+1);
@@ -307,8 +306,8 @@ void open_auction(int fd, char *buffer) {
     memset(fname, '\0', FNAME+1);
     if (read_from_tcp_spaces(fd, fname, FNAME+1) == -1)
         return;
-    memset(fsize, '\0', 8+1);
-    if (read_from_tcp_spaces(fd, fsize, 8+1) == -1)
+    memset(fsize, '\0', FSIZE+1);
+    if (read_from_tcp_spaces(fd, fsize, FSIZE+1) == -1)
         return;
 
     memset(buffer, '\0', OPEN_RCV);

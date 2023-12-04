@@ -126,9 +126,29 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
                     nleft-=nwritten; ptr+=nwritten;}  
 
     if (fname != NULL && fname[0] != '\0') {
-        if (send_file(fd, fname) == -1) {   /* send file to AS */
+        struct stat file_stat;
+        /* Open file for reading */
+        int file = open(fname, O_RDONLY);
+        if (file == -1) {
+            printf("Error opening file %s for reading\n", fname);
             freeaddrinfo(res); close(fd); return -1;
         }
+        /* Get file stats */
+        if (fstat(file, &file_stat) < 0) {
+            printf("Error opening file %s for reading\n", fname);
+            close(file); freeaddrinfo(res); close(fd); return -1;
+        }
+        long offset = 0;
+        long remain_data = file_stat.st_size;
+        ssize_t sent_bytes;
+        /* Sending file data */
+        while (((sent_bytes = sendfile(fd, file, &offset, BUFSIZ)) > 0) && (remain_data > 0)) {
+                remain_data -= sent_bytes;
+        } if (remain_data != 0) {
+            printf("Error sending file %s\n", fname);
+            close(file); freeaddrinfo(res); close(fd); return -1;
+        }
+        close(file);
     }
     /* send \n to AS */
     ptr = "\n"; nwritten=write(fd,ptr,1);
@@ -158,7 +178,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
 int no_uid_pass(char *command) {
     /* there is no uid or password on the user app */
     if (strlen(uid) != UID || strlen(password) != PASSWORD) {
-        printf("incorrect %s attempt\n", command);
+        printf("incorrect %s attempt. Login first\n", command);
         return 1;
     }
     return 0;
@@ -204,6 +224,8 @@ void logout() {
     if (confirm_only_cmd_input(input_buffer, "logout") == -1)
         return;
 
+    if (no_uid_pass("logout")) return;
+
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', LOGIN_SND);
     memset(msg_received, '\0', LOGIN_RCV);
@@ -224,6 +246,8 @@ void unregister() {
 
     if (confirm_only_cmd_input(input_buffer, "unregister") == -1)
         return;
+    
+    if (no_uid_pass("unregister")) return;
 
     /* initialize strings with \0 in every index */
     memset(buffer, '\0', LOGIN_SND);
@@ -377,7 +401,7 @@ void show_asset(char *first_word){
 void bid(char *first_word){
     char msg_received[BID_RCV];
     char buffer[BID_SND]; 
-    char aid[AID+1], bid_value[MAX_4_LONG+1];
+    char aid[AID+1], bid_value[MAX_4_SOME_INTS+1];
 
     if(confirm_bid_input(input_buffer, first_word, aid, bid_value) == -1){
         return;
