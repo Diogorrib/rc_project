@@ -44,9 +44,21 @@ void unregister(char *buffer, char *msg) {
     process_unregister(uid, pass, msg);
 }
 
-void myauctions(char *buffer, char *msg) { printf("TODO: myauctions"); (void)buffer; (void)msg; }
+void myauctions(char *buffer, char *msg) { 
+    char uid[UID+1];
+
+    if(confirm_list_my(buffer,uid,msg) == -1)
+        return;
+
+    process_ma(uid,msg);
+}
+
 void mybids(char *buffer, char *msg) { printf("TODO: mybids"); (void)buffer; (void)msg; }
-void list(char *buffer, char *msg) { printf("TODO: list"); (void)buffer; (void)msg; }
+
+void list(char *msg) { 
+    get_auctions("AUCTION", "RLS", msg, 3);
+}
+
 void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,8 +87,8 @@ void parse_udp_buffer(char *buffer, char *msg) {
         myauctions(buffer, msg);
     else if (!strcmp("LMB ", cmd))
         mybids(buffer, msg);
-    else if (!strcmp("LST ", cmd))
-        list(buffer, msg);
+    else if (!strcmp("LST\n", cmd))
+        list(msg);
     else if (!strcmp("SRC ", cmd))
         show_record(buffer, msg);
     else

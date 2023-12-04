@@ -163,3 +163,114 @@ int process_open(const char *uid, const char *pass, const char *name, const char
     sprintf(buffer, "ROA NOK\n");
     return -1;
 }
+/* 
+int filter(const struct dirent *entry) {
+    // Filter function to include only directories
+    return (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0);
+} */
+
+void get_auctions(const char *dirname, const char *cmd, char *msg, int size) {
+    struct dirent **filelist;
+    int n_entries;
+    char fname_auction[64];
+    char aid[AID+1];
+    int has_a_file = 0;
+    n_entries = scandir(dirname, &filelist, 0, alphasort);
+    if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
+        sprintf(msg, "%s NOK\n", cmd);
+        return;
+    } printf("AAAAAAAA\n");
+
+    for (int i = 0; i < n_entries; i++) {
+        printf("%s\n", filelist[i]->d_name);
+        if (strlen(filelist[i]->d_name) == size) { // Discard '.' , '..' and invalid filenames by size
+            if (!has_a_file) {
+                has_a_file = 1;
+                sprintf(msg, "%s OK", cmd);
+            }
+            memset(aid, '\0', AID+1);
+            memset(fname_auction, '\0', 64);
+            memcpy(aid, filelist[i]->d_name, AID);    // get aid from file name
+            sprintf(fname_auction, "AUCTIONS/%s/END_%s.txt", aid, aid);
+            sprintf(msg + strlen(msg), " %s", aid);
+            if (verify_file(fname_auction)) // auction ended
+                sprintf(msg + strlen(msg), " 0");
+            else                            // auction active
+                sprintf(msg + strlen(msg), " 1");
+        }
+        free(filelist[i]);
+    }
+    if(!has_a_file){ // dir exists but is empty (user has no auctions / bids)
+        sprintf(msg, "%s NOK\n", cmd);
+        return;
+    }
+    sprintf(msg + strlen(msg), "\n");
+    free(filelist);
+}
+
+/* int get_auctions(const char *dirname, const char *cmd, char *msg) {
+    struct dirent **filelist;
+    int n_entries, len;
+    char dirname[20];
+    char pathname[64];
+    char aid[AID+1];
+    sprintf(dirname, "AUCTIONS", AID) ;
+    n_entries = scandir(dirname, &filelist, 0, alphasort);
+    if (n_entries <= 0)// Could test for -1 since n_entries count always with . and . .
+        return -1;
+    list->no_bids=0;
+    while(n_entries--) {
+        len = strlen(filelist[n_entries]->d_name) ;
+        if (len == 7) { // Discard '.' , '..' and invalid filenames by size
+            memset(aid, '\0', AID+1);
+            memset(pathname, '\0', 64);
+            memcpy(aid, filelist[n_entries]->d_name, AID);    // get aid from file name
+            sprintf(pathname, "AUCTIONS/%s/END_%s.txt", aid, aid);
+        }
+        free ( filelist[n_entries] ) ;
+        if (n_bids==50) {
+            break;
+        }
+    }
+    free(filelist);
+    return 0;
+} */
+void process_ma(const char *uid, char *msg) {
+    char fname_login[64];
+    char hosted_dir[20];
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(hosted_dir, "USERS/%s/HOSTED", uid);
+
+    if(verify_file(fname_login)) {
+        if(verify_directory(hosted_dir)) {
+            get_auctions(hosted_dir, "RMA", msg, 7);
+            return;
+        }
+        // HOSTED dir does not exist (user has no auctions)
+        sprintf(msg, "RMA NOK\n");
+        return;
+    }
+    // if login file does not exist
+    sprintf(msg, "RMA NLG\n");
+}
+
+    /* char fname_auction[64];
+    int has_a_file = 0;
+    for (int i = 1; i < actual_aid; i++) {
+        if (!has_a_file) {
+            has_a_file = 1;
+            sprintf(msg, "RLS OK");
+        }
+        memset(fname_auction, '\0', 64);
+        sprintf(fname_auction, "AUCTIONS/%03d/END_%03d.txt", i, i);
+        sprintf(msg + strlen(msg), " %03d", i);
+        if (verify_file(fname_auction)) // auction ended
+            sprintf(msg + strlen(msg), " 0");
+        else                            // auction active
+            sprintf(msg + strlen(msg), " 1");
+    }
+    if(!has_a_file) { // no auctions
+        sprintf(msg, "RLS NOK\n");
+        return;
+    }
+    sprintf(msg + strlen(msg), "\n"); */

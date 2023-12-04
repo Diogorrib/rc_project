@@ -23,7 +23,7 @@ void logout(char *buffer, char *msg);
 void unregister(char *buffer, char *msg);
 void myauctions(char *buffer, char *msg);
 void mybids(char *buffer, char *msg);
-void list(char *buffer, char *msg);
+void list(char *msg);
 void show_record(char *buffer, char *msg);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

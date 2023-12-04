@@ -3,14 +3,14 @@
 #include "parse_server.h"
 
 
-int confirm_login(char *buffer, char *uid, char *pass, char *msg){
+int confirm_login(const char *buffer, char *uid, char *pass, char *msg){
 
     /* verify if the string has the correct size */
     if (strlen(buffer) != LOGIN_SND-1) {
         sprintf(msg, "ERR\n");
         return -1;
     }
-    /* verify if spaces are placed correctly */
+    /* verify if spaces and '\n' are placed correctly */
     if(buffer[CMD_N_SPACE+UID] != ' ' || buffer[LOGIN_SND-2] != '\n') {
         sprintf(msg, "ERR\n");
         return -1;
@@ -50,5 +50,31 @@ int confirm_open(const char *uid, const char *pass, const char *name, const char
         sprintf(msg, "ERR\n");
         return -1;
     }
+    return 0;
+}
+
+int confirm_list_my(const char *buffer, char *uid, char *msg) {
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != MY_SND-1) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    /* verify if the '\n' is placed correctly */
+    if(buffer[CMD_N_SPACE+UID] != '\n') {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
+    memcpy(uid, buffer+CMD_N_SPACE, UID);
+
+    /* verify if the uid have the correct size and is only digits */
+    if(strlen(uid) != UID || !is_numeric(uid)) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
     return 0;
 }

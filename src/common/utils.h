@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/sendfile.h>
+#include <dirent.h>
+
 
 /** Get the size of the file, if return is -1 it is possible that fname is not
  * the name of a file or this file does not exist
