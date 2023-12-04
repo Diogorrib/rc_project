@@ -1,7 +1,7 @@
 #ifndef __CONSTANT_H__
 #define __CONSTANT_H__
 
-#define DEFAULT_PORT "58011"    // 58000 + 64 (group number)
+#define DEFAULT_PORT "58064"    // 58000 + 64 (group number)
 #define DEFAULT_IP "localhost"  // tejo.tecnico.ulisboa.pt or localhost
 
 #define NI_MAXHOST 1025

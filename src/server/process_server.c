@@ -22,6 +22,26 @@ int read_password_file(const char *fname, char *existing_pass) {
     return 0;
 }
 
+int read_start_time(const char *fname, int *timeactive, long *starttime) {
+    char uid[UID+1], name[NAME+1], filename[FNAME+1], date[DATE_TIME+1];
+    int value;
+
+    /* Open file for reading */
+    FILE *file = fopen(fname, "rb");
+    if (file == NULL) {
+        printf("ERR: Failed to open file %s for reading\n", fname);
+        return -1;
+    }
+    /* Read from file timeactive and starttime, other things are irrelevant */
+    int result = fscanf(file, "%s %s %s %d %d %s %ld", uid, name, filename, &value, timeactive, date, starttime);
+    if(result != 7) {
+        printf("ERR: Failed to read file.\n");
+        fclose(file); return -1;
+    }
+    fclose(file);
+    return 0;
+}
+
 void process_login(const char *uid, const char *pass, char *msg) {
     char fname[64];
     char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
@@ -163,13 +183,8 @@ int process_open(const char *uid, const char *pass, const char *name, const char
     sprintf(buffer, "ROA NOK\n");
     return -1;
 }
-/* 
-int filter(const struct dirent *entry) {
-    // Filter function to include only directories
-    return (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0);
-} */
 
-void get_auctions(const char *dirname, const char *cmd, char *msg, int size) {
+void get_auctions(const char *dirname, const char *cmd, char *msg) {
     struct dirent **filelist;
     int n_entries;
     char fname_auction[64];
@@ -179,11 +194,10 @@ void get_auctions(const char *dirname, const char *cmd, char *msg, int size) {
     if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
         sprintf(msg, "%s NOK\n", cmd);
         return;
-    } printf("AAAAAAAA\n");
+    }
 
     for (int i = 0; i < n_entries; i++) {
-        printf("%s\n", filelist[i]->d_name);
-        if (strlen(filelist[i]->d_name) == size) { // Discard '.' , '..' and invalid filenames by size
+        if (strlen(filelist[i]->d_name) == AID+4) { // Discard '.' , '..' and invalid filenames by size
             if (!has_a_file) {
                 has_a_file = 1;
                 sprintf(msg, "%s OK", cmd);
@@ -208,33 +222,7 @@ void get_auctions(const char *dirname, const char *cmd, char *msg, int size) {
     free(filelist);
 }
 
-/* int get_auctions(const char *dirname, const char *cmd, char *msg) {
-    struct dirent **filelist;
-    int n_entries, len;
-    char dirname[20];
-    char pathname[64];
-    char aid[AID+1];
-    sprintf(dirname, "AUCTIONS", AID) ;
-    n_entries = scandir(dirname, &filelist, 0, alphasort);
-    if (n_entries <= 0)// Could test for -1 since n_entries count always with . and . .
-        return -1;
-    list->no_bids=0;
-    while(n_entries--) {
-        len = strlen(filelist[n_entries]->d_name) ;
-        if (len == 7) { // Discard '.' , '..' and invalid filenames by size
-            memset(aid, '\0', AID+1);
-            memset(pathname, '\0', 64);
-            memcpy(aid, filelist[n_entries]->d_name, AID);    // get aid from file name
-            sprintf(pathname, "AUCTIONS/%s/END_%s.txt", aid, aid);
-        }
-        free ( filelist[n_entries] ) ;
-        if (n_bids==50) {
-            break;
-        }
-    }
-    free(filelist);
-    return 0;
-} */
+
 void process_ma(const char *uid, char *msg) {
     char fname_login[64];
     char hosted_dir[20];
@@ -243,7 +231,7 @@ void process_ma(const char *uid, char *msg) {
 
     if(verify_file(fname_login)) {
         if(verify_directory(hosted_dir)) {
-            get_auctions(hosted_dir, "RMA", msg, 7);
+            get_auctions(hosted_dir, "RMA", msg);
             return;
         }
         // HOSTED dir does not exist (user has no auctions)
@@ -254,13 +242,64 @@ void process_ma(const char *uid, char *msg) {
     sprintf(msg, "RMA NLG\n");
 }
 
-    /* char fname_auction[64];
+void process_mb(const char *uid, char *msg) {
+    char fname_login[64];
+    char bidded_dir[20];
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(bidded_dir, "USERS/%s/BIDDED", uid);
+
+    if(verify_file(fname_login)) {
+        if(verify_directory(bidded_dir)) {
+            get_auctions(bidded_dir, "RMB", msg);
+            return;
+        }
+        // HOSTED dir does not exist (user has no auctions)
+        sprintf(msg, "RMB NOK\n");
+        return;
+    }
+    // if login file does not exist
+    sprintf(msg, "RMB NLG\n");
+}
+
+void verify_auction_end() {
+    char filepath[64], dirname[20], aid[AID+1];
+    int timeactive;
+    long starttime;
+    for (int i = 1; i <= MAX_AUCTION; i++) {
+        memset(aid, '\0', AID+1);
+        sprintf(aid, "%03d", i);
+        memset(dirname, '\0', 20);
+        sprintf(dirname, "AUCTIONS/%s", aid);
+        if(!verify_directory(dirname))  // auction does not exist
+            break;
+
+        memset(filepath, '\0', 64);
+        sprintf(filepath, "AUCTIONS/%s/END_%s.txt", aid, aid);
+        if (!verify_file(filepath)) {   // auction is active
+            memset(filepath, '\0', 64);
+            sprintf(filepath, "AUCTIONS/%s/START_%s.txt", aid, aid);
+            if (read_start_time(filepath, &timeactive, &starttime) != -1) {
+                create_end(aid, timeactive, starttime);
+            }
+        }
+    }
+}
+
+void process_list(char *msg) {
+    char fname_auction[64];
+    char dirname[20];
     int has_a_file = 0;
-    for (int i = 1; i < actual_aid; i++) {
+    for (int i = 1; i <= MAX_AUCTION; i++) {
+        memset(dirname, '\0', 20);
+        sprintf(dirname, "AUCTIONS/%03d", i);
+        if(!verify_directory(dirname))  // auction does not exist
+            break;
+
         if (!has_a_file) {
             has_a_file = 1;
             sprintf(msg, "RLS OK");
         }
+
         memset(fname_auction, '\0', 64);
         sprintf(fname_auction, "AUCTIONS/%03d/END_%03d.txt", i, i);
         sprintf(msg + strlen(msg), " %03d", i);
@@ -273,4 +312,5 @@ void process_ma(const char *uid, char *msg) {
         sprintf(msg, "RLS NOK\n");
         return;
     }
-    sprintf(msg + strlen(msg), "\n"); */
+    sprintf(msg + strlen(msg), "\n");
+}

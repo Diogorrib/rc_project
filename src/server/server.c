@@ -56,7 +56,7 @@ void myauctions(char *buffer, char *msg) {
 void mybids(char *buffer, char *msg) { printf("TODO: mybids"); (void)buffer; (void)msg; }
 
 void list(char *msg) { 
-    get_auctions("AUCTION", "RLS", msg, 3);
+    process_list(msg);
 }
 
 void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; }

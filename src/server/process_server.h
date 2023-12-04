@@ -11,9 +11,13 @@ void process_logout(const char *uid, const char *pass, char *msg);
 
 void process_unregister(const char *uid, const char *pass, char *msg);
 
-void get_auctions(const char *dirname, const char *cmd, char *msg, int size);
+void get_auctions(const char *dirname, const char *cmd, char *msg);
 
 void process_ma(const char *uid, char *msg);
+
+void process_mb(const char *uid, char *msg);
+
+void process_list(char *msg);
 
 
 /// --- TCP
