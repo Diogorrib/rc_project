@@ -70,6 +70,57 @@ int read_start_value(const char *fname, int *start_value) {
     return 0;
 }
 
+int read_start_all(const char *fname_start, char *msg) {
+    char host[DATE_TIME+1];
+    char name[NAME+1];
+    char fname[FNAME+1];
+    int start_value;
+    int timeactive;
+    char date[DATE+1];
+    char hour[HOUR+1];
+
+    /* Open file for reading */
+    FILE *file = fopen(fname_start, "rb");
+    if (file == NULL) {
+        printf("ERR: Failed to open file %s for reading\n", fname_start);
+        return -1;
+    }
+    int result = fscanf(file, "%s %s %s %d %d %s %s",
+            host, name, fname, &start_value, &timeactive, date, hour);
+    if(result != 7) {
+        printf("ERR: Failed to read file.\n");
+        fclose(file); return -1;
+    }
+    fclose(file);
+
+    sprintf(msg + strlen(msg),"%s %s %s %d %s %s %d",
+            host, name, fname, start_value, date, hour, timeactive);
+
+    return 0;
+}
+
+int read_end_all(const char *fname_end, char *msg) {
+    char date[DATE+1];
+    char hour[HOUR+1];
+    int end_sec_time;
+
+    /* Open file for reading */
+    FILE *file = fopen(fname_end, "rb");
+    if (file == NULL) {
+        printf("ERR: Failed to open file %s for reading\n", fname_end);
+        return -1;
+    }
+    int result = fscanf(file, "%s %s %d", date, hour, &end_sec_time);
+    if(result != 3) {
+        printf("ERR: Failed to read file.\n");
+        fclose(file); return -1;
+    }
+    fclose(file);
+
+    sprintf(msg + strlen(msg)," E %s %s %d", date, hour, end_sec_time);
+    return 0;
+}
+
 void verify_auction_end() {
     char filepath[64], dirname[20], aid[AID+1];
     int timeactive;
@@ -347,6 +398,69 @@ void process_mb(const char *uid, char *msg) {
     sprintf(msg, "RMB NLG\n");
 }
 
+void get_bids(const char *dirname, char *msg) {
+    struct dirent **filelist;
+    int n_entries;
+    char fname_bid[512];
+    char uid[UID+1], date[DATE+1], hour[HOUR+1];
+    int bid_value, bid_sec_time;
+    n_entries = scandir(dirname, &filelist, 0, alphasort);
+    if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
+        return;
+    }
+    int count = 0;
+    while(n_entries--) {
+        if (count < MAX_BIDS && strlen(filelist[n_entries]->d_name) == MAX_4_SOME_INTS+4) { // Discard '.' , '..' and invalid filenames by size
+            memset(fname_bid, '\0', 512);
+            sprintf(fname_bid, "%s/%s", dirname, filelist[n_entries]->d_name);
+            /* Open file for reading */
+            FILE *file = fopen(fname_bid, "rb");
+            if (file == NULL) {
+                printf("ERR: Failed to open file %s for reading\n", fname_bid);
+                return;
+            }
+            int result = fscanf(file, "%s %d %s %s %d", uid, &bid_value, date, hour, &bid_sec_time);
+            if(result != 5) {
+                printf("ERR: Failed to read file.\n");
+                fclose(file); return;
+            }
+            fclose(file);
+            
+            sprintf(msg + strlen(msg)," B %s %d %s %s %d", uid, bid_value, date, hour, bid_sec_time);
+            count++;
+        }
+        free(filelist[n_entries]);
+    }
+    free(filelist);
+}
+
+void process_sr(const char *aid, char *msg) {
+    char fname_start[64];
+    char fname_end[64];
+    char dirname[20];
+    char bidded_dir[20];
+    sprintf(dirname, "AUCTIONS/%s", aid);
+    sprintf(bidded_dir, "AUCTIONS/%s/BIDS", aid);
+    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
+    sprintf(fname_end, "AUCTIONS/%s/END_%s.txt", aid, aid);
+
+    if(verify_directory(dirname)) {
+        sprintf(msg, "RRC OK ");
+        read_start_all(fname_start, msg);
+        if(verify_directory(bidded_dir)) {
+            get_bids(bidded_dir, msg);
+        }
+        // acresecntar end se existir
+        if(verify_file(fname_end)) {
+            read_end_all(fname_end, msg);
+        }
+        sprintf(msg + strlen(msg), "\n");
+        return;
+    }
+    // if login file does not exist
+    sprintf(msg, "RRC NOK\n");
+}
+
 void process_list(char *msg) {
     char fname_auction[64];
     char dirname[20];
@@ -421,9 +535,7 @@ void process_close(const char *uid, const char *pass, const char *aid, char *buf
             return;
         }
         
-        printf("AAAA\n");
         if (read_start_time(fname_start, &timeactive, &starttime) != -1) {
-            printf("BBB\n");
             create_end_close(aid, starttime);
             sprintf(buffer, "RCL OK\n");
             return;

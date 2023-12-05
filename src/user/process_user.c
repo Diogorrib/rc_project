@@ -143,7 +143,7 @@ void process_close(char *msg, char *aid, const char *uid) {
         printf("auction is not owned by user %s\n", uid);
 
     else if(!strcmp(status, "END") && msg[7] == '\n')
-        printf("auction time had already ended\n");
+        printf("auction is already closed\n");
 
     else printf("%s", msg);
 }

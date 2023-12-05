@@ -106,3 +106,29 @@ int confirm_bid(const char *uid, const char *pass, const char *aid, const char *
     }
     return 0;
 }
+
+int confirm_sr(const char *buffer, char *aid, char *msg) {
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != SHOW_SND-1) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    /* verify if the '\n' is placed correctly */
+    if(buffer[CMD_N_SPACE+AID] != '\n') {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
+    memcpy(aid, buffer+CMD_N_SPACE, AID);
+
+    /* verify if the aid have the correct size and is only digits */
+    if(strlen(aid) != AID || !is_numeric(aid)) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    return 0;
+}

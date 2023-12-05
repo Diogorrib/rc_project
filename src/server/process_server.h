@@ -5,6 +5,8 @@ int read_password_file(const char *fname, char *existing_pass);
 
 void verify_auction_end();
 
+int read_start_all(const char *fname_start, char *msg);
+
 /// --- UDP
 
 void process_login(const char *uid, const char *pass, char *msg);
@@ -20,6 +22,8 @@ void process_ma(const char *uid, char *msg);
 void process_mb(const char *uid, char *msg);
 
 void process_list(char *msg);
+
+void process_sr(const char *aid, char *msg);
 
 
 /// --- TCP

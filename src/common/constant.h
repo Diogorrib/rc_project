@@ -13,6 +13,8 @@
 #define BUFFER_512 512
 #define FIRST_WORD 16
 #define MAX_4_SOME_INTS 6   // 6 is the max digits of some numbers
+#define DATE 10
+#define HOUR 8
 
 #define UID 6
 #define PASSWORD 8

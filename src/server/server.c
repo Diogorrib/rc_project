@@ -79,7 +79,16 @@ void list(char *msg) {
     process_list(msg);
 }
 
-void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; } // TEMOS DE VERIFICAR SE AS AÇÔES ACABARAM
+void show_record(char *buffer, char *msg) { 
+    char aid_record[AID+1];
+    
+    if(confirm_sr(buffer,aid_record,msg) == -1)
+        return;
+
+    verify_auction_end();
+    
+    process_sr(aid_record, msg);
+}
 
 void parse_udp_buffer(char *buffer, char *msg) {
     char cmd[CMD_N_SPACE+1];
@@ -352,7 +361,6 @@ void open_auction(int fd, char *buffer) {
 
 void close_auction(int fd, char *buffer) { 
     char uid[UID+1], pass[PASSWORD+1], aid_auction[AID+1];
-    printf("AAAAAAAAAAAAAA\n");
 
     memset(uid, '\0', UID+1);
     if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
@@ -368,18 +376,9 @@ void close_auction(int fd, char *buffer) {
     if(confirm_close(uid, pass, aid_auction, buffer) == -1) 
         return;
 
-    printf("NNNNNNNN\n");
-
     verify_auction_end();
 
-    printf("NNNNNNNN\n");
-
     process_close(uid, pass, aid_auction, buffer);
-
-    printf("%s\n", buffer);
-
-    printf("NNNNNNNN\n");
-
 }
 
 void show_asset(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: show_asset\n"); }
