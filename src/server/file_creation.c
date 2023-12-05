@@ -100,7 +100,7 @@ int create_end(const char *aid, int timeactive, long starttime) {
     if (actual_time >= limit_time) {
         convert_to_date(limit_time, time_str);
         memset(fdata, '\0', BUFFER_512);
-        sprintf(fdata, "%s %ld\n", time_str, limit_time);
+        sprintf(fdata, "%s %d\n", time_str, timeactive);
         sprintf(dirname, "AUCTIONS/%s",aid);
         sprintf(endfile, "%s/END_%s.txt",dirname,aid);
         if (create_file(endfile, dirname, fdata) == -1)
@@ -109,13 +109,27 @@ int create_end(const char *aid, int timeactive, long starttime) {
     return 1;
 }
 
-int create_bid_value(const char *aid, const char *value, const char *fdata) {
-    char filepath[64];
-    char dirname[20];
+int create_bid_value(const char *uid, const char *aid, const char *value, long starttime) {
+    char fname_auctions[64], fname_users[64];
+    char dirname_auctions[20], dirname_users[20];
+    char fdata[BUFFER_512];
+    time_t actual_time;
+    char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
+    int bid_value = atoi(value);
+    
+    time(&actual_time);
+    time_t bid_sec_time = (time_t) (actual_time - (time_t)starttime);
+    convert_to_date(actual_time, time_str);
+    sprintf(fdata, "%s %s %s %ld\n", uid, value, time_str, bid_sec_time);
 
-    sprintf(dirname, "AUCTIONS/%s/BIDS",aid);
-    sprintf(filepath, "%s/%s.txt",dirname,value);
-    if (create_file(filepath, dirname, fdata) == -1)
+    sprintf(dirname_auctions, "AUCTIONS/%s/BIDS",aid);
+    sprintf(fname_auctions, "%s/%06d.txt",dirname_auctions,bid_value);
+    if (create_file(fname_auctions, dirname_auctions, fdata) == -1)
+        return 0;
+
+    sprintf(dirname_users, "USERS/%s/BIDDED",uid);
+    sprintf(fname_users, "%s/%s.txt",dirname_users,aid);
+    if (create_file(fname_users, dirname_users, NULL) == -1)
         return 0;
     return 1;
 }

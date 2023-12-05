@@ -42,7 +42,7 @@ int confirm_open(const char *uid, const char *pass, const char *name, const char
         sprintf(msg, "ERR\n");
         return -1;
     }
-    /* verify if the uid is only digits and the pass is only letters and digits */
+    /* verify all the fields */
     if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_alphanumeric_extra(name) ||
         !is_numeric(start_value) || !is_numeric(timeactive) || !is_alphanumeric_extra(fname) ||
         !is_numeric(fsize)) {
@@ -76,5 +76,19 @@ int confirm_list_my(const char *buffer, char *uid, char *msg) {
         return -1;
     }
 
+    return 0;
+}
+
+int confirm_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer) {
+    /* verify if the uid, pass and aid have the correct sizes */
+    if(strlen(uid) != UID || strlen(pass) != PASSWORD || strlen(aid) != AID) {
+        sprintf(buffer, "ERR\n");
+        return -1;
+    }
+    /* verify all the fields */
+    if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_numeric(aid) || !is_numeric(bid_value)) {
+        sprintf(buffer, "ERR\n");
+        return -1;
+    }
     return 0;
 }

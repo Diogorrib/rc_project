@@ -8,6 +8,12 @@ int verbose_mode = 0; // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
 int aid = 1;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////// UDP /////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void login(char *buffer, char *msg) {
     char uid[UID+1];
     char pass[PASSWORD+1];
@@ -50,22 +56,30 @@ void myauctions(char *buffer, char *msg) {
     if(confirm_list_my(buffer,uid,msg) == -1)
         return;
 
+    verify_auction_end();
+
     process_ma(uid,msg);
 }
 
-void mybids(char *buffer, char *msg) { printf("TODO: mybids"); (void)buffer; (void)msg; }
+void mybids(char *buffer, char *msg) { 
+    char uid[UID+1];
 
-void list(char *msg) { 
+    if(confirm_list_my(buffer,uid,msg) == -1)
+        return;
+
+    verify_auction_end();
+
+    process_mb(uid,msg);
+}
+
+void list(char *msg) {
+
+    verify_auction_end();
+    
     process_list(msg);
 }
 
-void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////// UDP /////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void show_record(char *buffer, char *msg) { printf("TODO: show_record"); (void)buffer; (void)msg; } // TEMOS DE VERIFICAR SE AS AÇÔES ACABARAM
 
 void parse_udp_buffer(char *buffer, char *msg) {
     char cmd[CMD_N_SPACE+1];
@@ -109,7 +123,7 @@ void udp() {
     (void)n;
     (void)send_timeout;
 
-// UDP SERVER SECTION
+    // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET;
     hints.ai_socktype=SOCK_DGRAM;
@@ -246,11 +260,11 @@ int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
             printf("ERR: TCP: did not receive all message\n");
             return -1;
         }
-        if (nleft == 1 && aux[0] != ' ') {
+        if (nleft == 1 && aux[0] != ' ' && aux[0] != '\n') {
             printf("ERR: TCP: not a space\n"); // last char before the limit need to be a space
             return -1;
         }
-        if(aux[0] == ' ') {
+        if(aux[0] == ' ' || aux[0] == '\n') {
             if (nleft == to_read) {
                 printf("ERR: TCP: empty buffer\n"); // first char is a space
                 return -1;
@@ -336,9 +350,34 @@ void open_auction(int fd, char *buffer) {
         aid++;
 }
 
-void close_auction(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: close_auction\n"); }
+void close_auction(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: close_auction\n"); } // SE CALHAR TEMOS DE VERIFICAR SE AS AÇÔES ACABARAM
 void show_asset(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: show_asset\n"); }
-void bid(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: bid\n"); }
+
+void bid(int fd, char *buffer) {
+    char uid[UID+1], pass[PASSWORD+1], aid_bid[AID+1];
+    char bid_value[MAX_4_SOME_INTS+1];
+
+    memset(uid, '\0', UID+1);
+    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
+        return;
+    memset(pass, '\0', PASSWORD+1);
+    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+        return;
+    memset(aid_bid, '\0', AID+1);
+    if (read_from_tcp_spaces(fd, aid_bid, AID+1) == -1)
+        return;
+    memset(bid_value, '\0', MAX_4_SOME_INTS+1);
+    if (read_from_tcp_spaces(fd, bid_value, MAX_4_SOME_INTS+1) == -1)
+        return;
+
+    memset(buffer, '\0', BID_RCV);
+    if(confirm_bid(uid, pass, aid_bid, bid_value, buffer) == -1) 
+        return;
+
+    verify_auction_end();
+    
+    process_bid(uid, pass, aid_bid, bid_value, buffer);
+}
 
 void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen) {
     char cmd[CMD_N_SPACE+1];
