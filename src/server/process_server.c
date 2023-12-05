@@ -28,78 +28,56 @@ int read_password_file(const char *fname, char *existing_pass) {
     return 0;
 }
 
-int read_start_time(const char *fname, int *timeactive, long *starttime) {
-    char aux[DATE_TIME+1];
+int read_start_file(const char *path, char *uid, char *name, char *fname, int *start_value,
+                    int *timeactive, char *datetime, long *starttime) {
+    char aux_uid[DATE_TIME+1], aux_name[NAME+1], aux_fname[FNAME+1];
+    int aux_value, aux_active;
+    char date[DATE+1], hour[HOUR+1];
+    long aux_time;
 
     /* Open file for reading */
-    FILE *file = fopen(fname, "rb");
+    FILE *file = fopen(path, "rb");
     if (file == NULL) {
-        printf("ERR: Failed to open file %s for reading\n", fname);
+        printf("ERR: Failed to open file %s for reading\n", path);
         return -1;
     }
-    /* Read from file timeactive and starttime, the other fields are irrelevant */
-    int result = fscanf(file, "%s %s %s %s %d %s %s %ld",
-            aux, aux, aux, aux, timeactive, aux, aux, starttime);
-    if(result != 8) {
-        printf("ERR: Failed to read file.\n");
-        fclose(file); return -1;
-    }
-    fclose(file);
-    return 0;
-}
-
-int read_start_value(const char *fname, int *start_value) {
-    char aux[DATE_TIME+1];
-    long aux_long;
-    int aux_int;
-
-    /* Open file for reading */
-    FILE *file = fopen(fname, "rb");
-    if (file == NULL) {
-        printf("ERR: Failed to open file %s for reading\n", fname);
-        return -1;
-    }
-    /* Read from file start_value, the other fields are irrelevant */
     int result = fscanf(file, "%s %s %s %d %d %s %s %ld",
-            aux, aux, aux, start_value, &aux_int, aux, aux, &aux_long);
+            aux_uid, aux_name, aux_fname, &aux_value, &aux_active, date, hour, &aux_time);
     if(result != 8) {
         printf("ERR: Failed to read file.\n");
         fclose(file); return -1;
     }
     fclose(file);
+
+    if (uid != NULL)
+        sprintf(uid, "%s", aux_uid);
+    if (name != NULL)
+        sprintf(name, "%s", aux_name);
+    if (fname != NULL)
+        sprintf(fname, "%s", aux_fname);
+    if (start_value != NULL)
+        *start_value = aux_value;
+    if (timeactive != NULL)
+        *timeactive = aux_active;
+    if (datetime != NULL)
+        sprintf(datetime, "%s %s", date, hour);
+    if (starttime != NULL)
+        *starttime = aux_time;
     return 0;
 }
 
-int read_start_all(const char *fname_start, char *msg) {
-    char host[DATE_TIME+1];
-    char name[NAME+1];
-    char fname[FNAME+1];
-    int start_value;
-    int timeactive;
-    char date[DATE+1];
-    char hour[HOUR+1];
+int read_start(const char *fname_start, char *msg) {
+    char host[DATE_TIME+1], name[NAME+1], fname[FNAME+1];
+    int start_value, timeactive;
+    char datetime[DATE_TIME+1];
 
-    /* Open file for reading */
-    FILE *file = fopen(fname_start, "rb");
-    if (file == NULL) {
-        printf("ERR: Failed to open file %s for reading\n", fname_start);
-        return -1;
-    }
-    int result = fscanf(file, "%s %s %s %d %d %s %s",
-            host, name, fname, &start_value, &timeactive, date, hour);
-    if(result != 7) {
-        printf("ERR: Failed to read file.\n");
-        fclose(file); return -1;
-    }
-    fclose(file);
-
-    sprintf(msg + strlen(msg),"%s %s %s %d %s %s %d",
-            host, name, fname, start_value, date, hour, timeactive);
-
+    read_start_file(fname_start, host, name, fname, &start_value, &timeactive, datetime, NULL);
+    sprintf(msg + strlen(msg),"%s %s %s %d %s %d",
+        host, name, fname, start_value, datetime, timeactive);
     return 0;
 }
 
-int read_end_all(const char *fname_end, char *msg) {
+int read_end(const char *fname_end, char *msg) {
     char date[DATE+1];
     char hour[HOUR+1];
     int end_sec_time;
@@ -138,7 +116,7 @@ void verify_auction_end() {
         if (!verify_file(filepath)) {   // auction is active
             memset(filepath, '\0', 64);
             sprintf(filepath, "AUCTIONS/%s/START_%s.txt", aid, aid);
-            if (read_start_time(filepath, &timeactive, &starttime) != -1) {
+            if (read_start_file(filepath, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
                 create_end(aid, timeactive, starttime);
             }
         }
@@ -189,7 +167,7 @@ void get_highest_bid(const char *dirname, const char *start_file, char *bid_valu
     int has_a_file = 0;
     int start_value;
 
-    read_start_value(start_file, &start_value);
+    read_start_file(start_file, NULL, NULL, NULL, &start_value, NULL, NULL, NULL);
 
     n_entries = scandir(dirname, &filelist, 0, alphasort);
     if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
@@ -446,19 +424,40 @@ void process_sr(const char *aid, char *msg) {
 
     if(verify_directory(dirname)) {
         sprintf(msg, "RRC OK ");
-        read_start_all(fname_start, msg);
+        read_start(fname_start, msg);
         if(verify_directory(bidded_dir)) {
             get_bids(bidded_dir, msg);
         }
         // acresecntar end se existir
         if(verify_file(fname_end)) {
-            read_end_all(fname_end, msg);
+            read_end(fname_end, msg);
         }
         sprintf(msg + strlen(msg), "\n");
         return;
     }
-    // if login file does not exist
+    // if auction does not exist
     sprintf(msg, "RRC NOK\n");
+}
+
+int process_sa(const char *aid, char *fname, long *fsize, char *msg) {
+    char dirname[20];
+    char filepath[64];
+    char fname_start[64];
+    sprintf(dirname, "AUCTIONS/%s", aid);
+    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
+
+    if(verify_directory(dirname)) {
+        read_start_file(fname_start, NULL, NULL, fname, NULL, NULL, NULL, NULL);
+        sprintf(filepath,"AUCTIONS/%s/%s", aid, fname);
+        if (get_file_size(filepath, fsize) == -1) {
+            sprintf(msg, "RSA NOK\n");
+            return -1;
+        }
+        return 0;
+    }
+    // if auction does not exist
+    sprintf(msg, "RSA NOK\n");
+    return -1;
 }
 
 void process_list(char *msg) {
@@ -535,7 +534,7 @@ void process_close(const char *uid, const char *pass, const char *aid, char *buf
             return;
         }
         
-        if (read_start_time(fname_start, &timeactive, &starttime) != -1) {
+        if (read_start_file(fname_start, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
             create_end_close(aid, starttime);
             sprintf(buffer, "RCL OK\n");
             return;
@@ -594,7 +593,7 @@ void process_bid(const char *uid, const char *pass, const char *aid, const char 
             return;
         }
         
-        if (read_start_time(fname_start, &timeactive, &starttime) != -1) {
+        if (read_start_file(fname_start, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
             create_bid_value(uid, aid, bid_value, starttime);
             sprintf(buffer, "RBD ACC\n");
             return;

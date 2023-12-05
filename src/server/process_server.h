@@ -5,7 +5,10 @@ int read_password_file(const char *fname, char *existing_pass);
 
 void verify_auction_end();
 
-int read_start_all(const char *fname_start, char *msg);
+int read_start_file(const char *path, char *uid, char *name, char *fname, int *start_value,
+                    int *timeactive, char *datetime, long *starttime);
+
+int read_start(const char *fname_start, char *msg);
 
 /// --- UDP
 
@@ -32,6 +35,8 @@ int process_open(const char *uid, const char *pass, const char *name, const char
                 const char *timeactive, const char *fname, const char *aid, char *buffer);
 
 void process_close(const char *uid, const char *pass, const char *aid, char *buffer);
+
+int process_sa(const char *aid, char *fname, long *fsize, char *msg);
 
 void get_highest_bid(const char *dirname, const char *start_file, char *bid_value);
 

@@ -132,3 +132,14 @@ int confirm_sr(const char *buffer, char *aid, char *msg) {
 
     return 0;
 }
+
+int confirm_sa(const char *aid, char *buffer) {
+    
+    /* verify if the aid have the correct size and is only digits */
+    if(strlen(aid) != AID || !is_numeric(aid)) {
+        sprintf(buffer, "ERR\n");
+        return -1;
+    }
+
+    return 0;
+}

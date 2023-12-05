@@ -42,7 +42,7 @@ int write_to_tcp(int fd, char *buffer);
 
 void open_auction(int fd, char *buffer);
 void close_auction(int fd, char *buffer);
-void show_asset(int fd, char *buffer);
+int show_asset(int fd, char *buffer);
 void bid(int fd, char *buffer);
 
 void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen);

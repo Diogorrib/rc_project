@@ -381,7 +381,38 @@ void close_auction(int fd, char *buffer) {
     process_close(uid, pass, aid_auction, buffer);
 }
 
-void show_asset(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: show_asset\n"); }
+/* if return is 0 message is NOK else send the asset (inside ths function) */
+int show_asset(int fd, char *buffer) {
+    char aid_auction[AID+1], fname[FNAME+1], filepath[64];
+    long fsize;
+    
+    memset(aid_auction, '\0', AID+1);
+    if (read_from_tcp_spaces(fd, aid_auction, AID+1) == -1)
+        return 0;
+
+    memset(buffer, '\0', OPEN_RCV); // reset buffer
+    if(confirm_sa(aid_auction, buffer) == -1) 
+        return 0;
+
+    if (process_sa(aid_auction, fname, &fsize, buffer) == -1)
+        return 0;
+
+    /* Send the 'RSA OK fname fsize ' */
+    sprintf(buffer, "RSA OK ");
+    write_to_tcp(fd, buffer);
+
+    sprintf(filepath,"AUCTIONS/%s/%s", aid_auction, fname);
+    write_to_tcp(fd, fname);
+
+    memset(buffer, '\0', OPEN_RCV);
+    sprintf(buffer, " %ld ", fsize);
+    write_to_tcp(fd, buffer);
+
+    /* Send the asset file and the \n */
+    send_file(fd, filepath, fsize);
+    write_to_tcp(fd, "\n");
+    return 1;
+}
 
 void bid(int fd, char *buffer) {
     char uid[UID+1], pass[PASSWORD+1], aid_bid[AID+1];
@@ -429,16 +460,20 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
     }
 
     /* Compare cmd with the list of possible udp actions */
-    if (!strcmp("OPA ", cmd))
+    if (!strcmp("OPA ", cmd)) 
         open_auction(fd, buffer);
     else if (!strcmp("CLS ", cmd))
         close_auction(fd, buffer);
-    else if (!strcmp("SAS ", cmd))
-        show_asset(fd, buffer);
+    else if (!strcmp("SAS ", cmd)) {
+        if (show_asset(fd, buffer))
+            return;
+    }
     else if (!strcmp("BID ", cmd))
         bid(fd, buffer);
     else
-        printf("ERR: TODO %s\n", cmd);
+        sprintf(buffer, "ERR: %s not valid\n", cmd);
+    
+    write_to_tcp(fd, buffer);
 }
 
 void tcp() {
@@ -503,8 +538,6 @@ void tcp() {
 
                     parse_tcp_buffer(new_fd, msg_sent, addr, addrlen);
 
-                    write_to_tcp(new_fd, msg_sent);
-                    
                     close(new_fd);
                 }
         }

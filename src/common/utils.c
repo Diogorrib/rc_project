@@ -18,25 +18,57 @@ int delete_file(char *fname) {
     return 0;
 }
 
-/* int send_file(int fd, char *fname) {
-    char buffer[512];
+int send_file(int fd, char *fname, long fsize) {
+    char buffer[BUFSIZ];
+    struct timeval send_timeout;
+    ssize_t nleft,nwritten;
+    size_t bytesRead;
+    char *ptr;
+    struct sigaction act;
 
-    / Open file for reading /
-    FILE *file = fopen(fname, "rb");
-    if (file == NULL) {
-        printf("Error opening file %s for reading\n", fname);
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+    if (sigaction(SIGPIPE,&act,NULL) == -1) {//error
+        printf("ERR: TCP: send_file\n");
         return -1;
     }
 
-    / Send file data /
-    size_t bytesRead;
-    while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-        send(fd, buffer, bytesRead, 0);
+    /* Open file for reading */
+    FILE *file = fopen(fname, "rb");
+    if (file == NULL) {
+        printf("ERR: send_file: Error opening file %s for reading\n", fname);
+        return -1;
+    }
+
+    /* Send file data */
+    while (fsize > 0) {
+        bytesRead = fread(buffer, 1, BUFSIZ, file);
+        if (bytesRead <= 0) {
+            printf("ERR: TCP: send_file: did not send all file\n");
+            fclose(file); return -1;
+        }
+        nleft=(ssize_t)bytesRead; ptr=buffer;
+        while (nleft>0) {
+            /* Set send timeout */ 
+            send_timeout.tv_sec = 3; // 5 seconds timeout
+            send_timeout.tv_usec = 0;
+            if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+                printf("ERR: TCP: send_file: did not send all file\n");
+                fclose(file); return -1;
+            }
+            nwritten=write(fd,ptr,(size_t)nleft);
+            if(nwritten <= 0) {    // closed by user or timeout event
+                printf("ERR: TCP: send_file: did not send all file\n");
+                fclose(file); return -1;
+            }
+            nleft-=nwritten; ptr+=nwritten;
+        }
+        fsize-=(long)bytesRead;
     }
 
     fclose(file);
     return 0;
-} */
+}
 
 int receive_file(int fd, char *fname, long fsize) {
     char buffer[512];

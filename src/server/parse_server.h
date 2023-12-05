@@ -12,6 +12,8 @@ int confirm_sr(const char *buffer, char *aid, char *msg);
 
 int confirm_close(const char *uid, const char *pass, const char *aid, char *buffer);
 
+int confirm_sa(const char *aid, char *buffer);
+
 int confirm_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer);
 
 
