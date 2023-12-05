@@ -11,5 +11,6 @@ int create_asset(int fd, const char *aid, const char *fname, const char *fsize);
 int create_end(const char *aid, int timeactive, long starttime);
 int create_bid_value(const char *uid, const char *aid, const char *value, long starttime);
 int create_open_files(const char *aid, const char *uid, char *fdata);
+int create_end_close(const char *aid, long starttime);
 
 #endif // __FILE_CREATION_H__

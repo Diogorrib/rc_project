@@ -109,6 +109,25 @@ int create_end(const char *aid, int timeactive, long starttime) {
     return 1;
 }
 
+int create_end_close(const char *aid, long starttime) {
+    char endfile[64];
+    char dirname[20];
+    char fdata[BUFFER_512];
+    time_t actual_time;
+    char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
+    
+    time(&actual_time);
+    convert_to_date(actual_time, time_str);
+    int timeactive = (int) (actual_time - (time_t) starttime);
+    memset(fdata, '\0', BUFFER_512);
+    sprintf(fdata, "%s %d\n", time_str, timeactive);
+    sprintf(dirname, "AUCTIONS/%s",aid);
+    sprintf(endfile, "%s/END_%s.txt",dirname,aid);
+    if (create_file(endfile, dirname, fdata) == -1)
+        return 0;
+    return 1;
+}
+
 int create_bid_value(const char *uid, const char *aid, const char *value, long starttime) {
     char fname_auctions[64], fname_users[64];
     char dirname_auctions[20], dirname_users[20];

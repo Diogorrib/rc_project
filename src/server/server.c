@@ -336,7 +336,7 @@ void open_auction(int fd, char *buffer) {
     if (read_from_tcp_spaces(fd, fsize, FSIZE+1) == -1)
         return;
 
-    memset(buffer, '\0', OPEN_RCV);
+    memset(buffer, '\0', OPEN_RCV); // reset buffer
     if(confirm_open(uid, pass, name, start_value, timeactive, fname, fsize, buffer) == -1) 
         return;
     
@@ -350,7 +350,38 @@ void open_auction(int fd, char *buffer) {
         aid++;
 }
 
-void close_auction(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: close_auction\n"); } // SE CALHAR TEMOS DE VERIFICAR SE AS AÇÔES ACABARAM
+void close_auction(int fd, char *buffer) { 
+    char uid[UID+1], pass[PASSWORD+1], aid_auction[AID+1];
+    printf("AAAAAAAAAAAAAA\n");
+
+    memset(uid, '\0', UID+1);
+    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
+        return;
+    memset(pass, '\0', PASSWORD+1);
+    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+        return;
+    memset(aid_auction, '\0', AID+1);
+    if (read_from_tcp_spaces(fd, aid_auction, AID+1) == -1)
+        return;
+
+    memset(buffer, '\0', OPEN_RCV); // reset buffer
+    if(confirm_close(uid, pass, aid_auction, buffer) == -1) 
+        return;
+
+    printf("NNNNNNNN\n");
+
+    verify_auction_end();
+
+    printf("NNNNNNNN\n");
+
+    process_close(uid, pass, aid_auction, buffer);
+
+    printf("%s\n", buffer);
+
+    printf("NNNNNNNN\n");
+
+}
+
 void show_asset(int fd, char *buffer) { (void)fd; (void)buffer; printf("TODO: show_asset\n"); }
 
 void bid(int fd, char *buffer) {
@@ -370,7 +401,7 @@ void bid(int fd, char *buffer) {
     if (read_from_tcp_spaces(fd, bid_value, MAX_4_SOME_INTS+1) == -1)
         return;
 
-    memset(buffer, '\0', BID_RCV);
+    memset(buffer, '\0', OPEN_RCV); // reset buffer
     if(confirm_bid(uid, pass, aid_bid, bid_value, buffer) == -1) 
         return;
 

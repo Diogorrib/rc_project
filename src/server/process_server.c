@@ -377,6 +377,61 @@ void process_list(char *msg) {
     sprintf(msg + strlen(msg), "\n");
 }
 
+void process_close(const char *uid, const char *pass, const char *aid, char *buffer) {
+    char fname_pass[64];
+    char fname_login[64];
+    char fname_auction[64];
+    char fname_start[64];
+    char fname_hosted[64];
+    char aid_dirname[20];
+    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    int timeactive;
+    long starttime;
+    
+    sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
+    sprintf(fname_auction, "AUCTIONS/%s/END_%s.txt", aid, aid);
+    sprintf(fname_hosted, "USERS/%s/HOSTED/%s.txt", uid, aid);
+    sprintf(fname_start, "AUCTIONS/%s/START_%s.txt", aid, aid);
+    
+    if(verify_file(fname_pass)){
+        if (read_password_file(fname_pass, existing_pass) == -1 || strcmp(existing_pass,pass)) {
+            sprintf(buffer, "ERR\n");
+            return;
+        }
+
+        if(!verify_file(fname_login)) { // if login file does not exist
+            sprintf(buffer, "RCL NLG\n");
+            return;
+        }
+
+        if (!verify_directory(aid_dirname)) { // if the auction does not exist
+            sprintf(buffer, "RCL EAU\n");
+            return;
+        }
+
+        if (!verify_file(fname_hosted)) { // auction not hosted by himself
+            sprintf(buffer, "RCL EOW\n");
+            return;
+        }
+        
+        if(verify_file(fname_auction)) { // auction not active
+            sprintf(buffer, "RCL END\n");
+            return;
+        }
+        
+        printf("AAAA\n");
+        if (read_start_time(fname_start, &timeactive, &starttime) != -1) {
+            printf("BBB\n");
+            create_end_close(aid, starttime);
+            sprintf(buffer, "RCL OK\n");
+            return;
+        }
+    }
+    sprintf(buffer, "ERR\n");
+}
+
 void process_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer) {
     char fname_pass[64];
     char fname_login[64];

@@ -65,9 +65,11 @@ user: src/user/user
 clean:
 	rm -f $(OBJECTS) $(TARGETS) $(TARGET_EXECS)
 
+# clean all server data
 clean-data:
 	rm -rf USERS AUCTIONS
 
+# clean files received using show_asset or sa command in user app
 clean-sa:
 	rm -f *.txt *.png *.jpg   
 
