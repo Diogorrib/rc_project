@@ -163,7 +163,7 @@ void udp() {
                 if(FD_ISSET(fd,&testfds)) {
                     addrlen=sizeof(addr);
                     
-                    if (set_recv_timeout(fd, 3) == -1) {
+                    if (set_recv_timeout(fd, SERVER_UDP_TIMEOUT) == -1) {
                         printf("ERR: UDP: recv_timeout\n");
                         freeaddrinfo(res); close(fd); return;
                     }
@@ -185,7 +185,7 @@ void udp() {
                     
                     parse_udp_buffer(buffer, msg_sent);
                     
-                    if (set_send_timeout(fd, 3) == -1) {
+                    if (set_send_timeout(fd, SERVER_UDP_TIMEOUT) == -1) {
                         printf("ERR: UDP: send_timeout\n");
                         freeaddrinfo(res); close(fd); return;
                     }
@@ -211,7 +211,7 @@ int read_from_tcp(int fd, char *buffer, int to_read) {
 
     nleft=to_read; ptr=buffer;
     while (nleft>0) {
-        if (set_recv_timeout(fd, 2) == -1) {
+        if (set_recv_timeout(fd, SERVER_TCP_TIMEOUT) == -1) {
             printf("ERR: TCP: read timeout\n");
             return -1;
         }
@@ -250,7 +250,7 @@ int write_to_tcp(int fd, char *buffer) {
     }
     nleft=(ssize_t)strlen(buffer); ptr=buffer;
     while (nleft>0) {
-        if (set_send_timeout(fd, 2) == -1) {
+        if (set_send_timeout(fd, SERVER_TCP_TIMEOUT) == -1) {
             printf("ERR: TCP: write timeout\n");
             return -1;
         }
@@ -388,12 +388,12 @@ void bid(int fd, char *buffer) {
 }
 
 void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen) {
-    char cmd[CMD_N_SPACE+1];
+    char cmd[CMD_N_SPACE];
     char host[NI_MAXHOST], service[NI_MAXSERV];
     int errcode;
 
     // get the action to do
-    memset(cmd, '\0', CMD_N_SPACE+1);
+    memset(cmd, '\0', CMD_N_SPACE);
     if (read_from_tcp(fd, cmd, CMD_N_SPACE) == -1)
         return;
 
@@ -408,15 +408,15 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
 
     /* Compare cmd with the list of possible udp actions */
     memset(buffer, '\0', OPEN_RCV);
-    if (!strcmp("OPA ", cmd)) 
+    if (!strcmp("OPA", cmd)) 
         open_auction(fd, buffer);
-    else if (!strcmp("CLS ", cmd))
+    else if (!strcmp("CLS", cmd))
         close_auction(fd, buffer);
-    else if (!strcmp("SAS ", cmd)) {
+    else if (!strcmp("SAS", cmd)) {
         if (show_asset(fd, buffer))
             return;
     }
-    else if (!strcmp("BID ", cmd))
+    else if (!strcmp("BID", cmd))
         bid(fd, buffer);
     else
         sprintf(buffer, "ERR\n");

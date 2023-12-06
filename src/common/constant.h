@@ -7,8 +7,6 @@
 #define NI_MAXHOST 1025
 #define NI_MAXSERV 32
 
-#define SERVER_UDP_TIMEOUT 3
-#define SERVER_TCP_TIMEOUT 2
 #define USER_TIMEOUT 5
 #define BIG_TIMEOUT 30
 

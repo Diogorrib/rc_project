@@ -97,7 +97,7 @@ int send_file(int fd, char *fname, long fsize) {
         }
         nleft=(ssize_t)bytesRead; ptr=buffer;
         while (nleft>0) {
-            if (set_send_timeout(fd, 2) == -1) {
+            if (set_send_timeout(fd, SERVER_TCP_TIMEOUT) == -1) {
                 printf("ERR: TCP: send_file: did not send all file\n");
                 fclose(file); return -1;
             }

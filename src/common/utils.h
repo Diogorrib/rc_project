@@ -22,6 +22,9 @@
 #include <sys/sendfile.h>
 #include <dirent.h>
 
+#define SERVER_UDP_TIMEOUT 3
+#define SERVER_TCP_TIMEOUT 2
+
 /////////////////////////////// FILES AND DIRECTORIES /////////////////////////////////////////////
 
 /// @brief Get the size of the file in bytes

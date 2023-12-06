@@ -51,7 +51,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
         close(fd); return -1;
     }
 
-    if (set_send_timeout(fd, USER_TIMEOUT)) {
+    if (set_send_timeout(fd, USER_TIMEOUT) == -1) {
         printf("Can't connect with the server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
