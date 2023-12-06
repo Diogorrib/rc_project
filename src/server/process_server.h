@@ -3,7 +3,8 @@
 
 int read_password_file(const char *fname, char *existing_pass);
 
-void verify_auction_end();
+void verify_all_end();
+int verify_auction_end(const char *aid);
 
 int read_start_file(const char *path, char *uid, char *name, char *fname, int *start_value,
                     int *timeactive, char *datetime, long *starttime);

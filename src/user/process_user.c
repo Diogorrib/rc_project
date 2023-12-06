@@ -321,7 +321,7 @@ int process_sa(int fd, char *fname, char *msg) {
     else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
         if (get_fname_fsize(fd, fname, &fsize) == -1)
             return -1;
-        if (receive_file(fd, fname, fsize) == -1)
+        if (receive_file(fd, fname, fsize, USER_TIMEOUT) == -1)
             return -1;
         printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
     }

@@ -8,11 +8,7 @@ int verbose_mode = 0; // if zero verbose mode is off else is on
 char *as_port = DEFAULT_PORT;
 int aid = 1;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////// UDP /////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void login(char *buffer, char *msg) {
     char uid[UID+1];
@@ -28,9 +24,6 @@ void logout(char *buffer, char *msg) {
     char uid[UID+1];
     char pass[PASSWORD+1];
 
-    /* The message receive from the user is equal to the login comand.   */
-    /* The only diference is the command of the 3 initial letters, so we */
-    /* can use the function confirm_login() here.                        */
     if(confirm_login(buffer, uid, pass, msg) == -1) 
         return;
     
@@ -41,9 +34,6 @@ void unregister(char *buffer, char *msg) {
     char uid[UID+1];
     char pass[PASSWORD+1];
 
-    /* The message receive from the user is equal to the login comand.   */
-    /* The only diference is the command of the 3 initial letters, so we */
-    /* can use the function confirm_login() here.                        */
     if(confirm_login(buffer, uid, pass, msg) == -1) 
         return;
     
@@ -56,7 +46,7 @@ void myauctions(char *buffer, char *msg) {
     if(confirm_list_my(buffer,uid,msg) == -1)
         return;
 
-    verify_auction_end();
+    verify_all_end();
 
     process_ma(uid,msg);
 }
@@ -67,14 +57,14 @@ void mybids(char *buffer, char *msg) {
     if(confirm_list_my(buffer,uid,msg) == -1)
         return;
 
-    verify_auction_end();
+    verify_all_end();
 
     process_mb(uid,msg);
 }
 
 void list(char *msg) {
 
-    verify_auction_end();
+    verify_all_end();
     
     process_list(msg);
 }
@@ -85,7 +75,7 @@ void show_record(char *buffer, char *msg) {
     if(confirm_sr(buffer,aid_record,msg) == -1)
         return;
 
-    verify_auction_end();
+    verify_auction_end(aid_record);
     
     process_sr(aid_record, msg);
 }
@@ -97,8 +87,10 @@ void parse_udp_buffer(char *buffer, char *msg) {
         sprintf(msg, "ERR\n");
         return;
     }
+    // get the action to do
     memset(cmd, '\0', CMD_N_SPACE+1);
     memcpy(cmd, buffer, CMD_N_SPACE);
+
     /* Compare cmd with the list of possible udp actions */
     if (!strcmp("LIN ", cmd))
         login(buffer, msg);
@@ -120,17 +112,14 @@ void parse_udp_buffer(char *buffer, char *msg) {
 
 void udp() {
     fd_set inputs, testfds;
-    struct timeval timeout,send_timeout,recv_timeout;
+    struct timeval timeout;
     int fd,out_fds,errcode;
-    ssize_t nread,nwritten,n;
+    ssize_t nread,nwritten;
     char buffer[LOGIN_SND], msg_sent[SR_RCV];
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
     char host[NI_MAXHOST], service[NI_MAXSERV];
-
-    (void)n;
-    (void)send_timeout;
 
     // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -161,12 +150,11 @@ void udp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=UDP_TIMEOUT;
+        timeout.tv_sec=BIG_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                //printf("\n ---------------UDP timeout event-----------------\n");
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
@@ -174,10 +162,8 @@ void udp() {
             default:
                 if(FD_ISSET(fd,&testfds)) {
                     addrlen=sizeof(addr);
-                    /* Set receive timeout */
-                    recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-                    recv_timeout.tv_usec = 0;
-                    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+                    
+                    if (set_recv_timeout(fd, 3) == -1) {
                         printf("ERR: UDP: recv_timeout\n");
                         freeaddrinfo(res); close(fd); return;
                     }
@@ -199,10 +185,7 @@ void udp() {
                     
                     parse_udp_buffer(buffer, msg_sent);
                     
-                    /* Set send timeout */ 
-                    send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-                    send_timeout.tv_usec = 0;
-                    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+                    if (set_send_timeout(fd, 3) == -1) {
                         printf("ERR: UDP: send_timeout\n");
                         freeaddrinfo(res); close(fd); return;
                     }
@@ -220,47 +203,15 @@ void udp() {
     close(fd);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////// TCP /////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int read_from_tcp(int fd, char *buffer, long to_read) {
-    struct timeval recv_timeout;
-    ssize_t nleft,nread;
-    char *ptr;
-
-    nleft=to_read; ptr=buffer;
-    while (nleft>0) {
-        /* Set receive timeout */
-        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-        recv_timeout.tv_usec = 0;
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-            printf("ERR: TCP: read timeout\n");
-            return -1;
-        }
-        nread=read(fd,ptr,(size_t)nleft);
-        if(nread <= 0) {    // closed by user or timeout event
-            printf("ERR: TCP: did not receive all message\n");
-            return -1;
-        }
-        nleft-=nread; ptr+=nread;
-    }
-    return 0;
-}
-
-int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
-    struct timeval recv_timeout;
+int read_from_tcp(int fd, char *buffer, int to_read) {
     ssize_t nleft,nread;
     char aux[1], *ptr;
 
     nleft=to_read; ptr=buffer;
     while (nleft>0) {
-        /* Set receive timeout */
-        recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-        recv_timeout.tv_usec = 0;
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+        if (set_recv_timeout(fd, 2) == -1) {
             printf("ERR: TCP: read timeout\n");
             return -1;
         }
@@ -287,7 +238,6 @@ int read_from_tcp_spaces(int fd, char *buffer, int to_read) {
 }
 
 int write_to_tcp(int fd, char *buffer) {
-    struct timeval send_timeout;
     ssize_t nleft,nwritten;
     char *ptr;
     struct sigaction act;
@@ -300,10 +250,7 @@ int write_to_tcp(int fd, char *buffer) {
     }
     nleft=(ssize_t)strlen(buffer); ptr=buffer;
     while (nleft>0) {
-        /* Set receive timeout */ 
-        send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-        send_timeout.tv_usec = 0;
-        if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+        if (set_send_timeout(fd, 2) == -1) {
             printf("ERR: TCP: write timeout\n");
             return -1;
         }
@@ -324,25 +271,25 @@ void open_auction(int fd, char *buffer) {
     char aid_str[AID+1];
 
     memset(uid, '\0', UID+1);
-    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
+    if (read_from_tcp(fd, uid, UID+1) == -1)
         return;
     memset(pass, '\0', PASSWORD+1);
-    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+    if (read_from_tcp(fd, pass, PASSWORD+1) == -1)
         return;
     memset(name, '\0', NAME+1);
-    if (read_from_tcp_spaces(fd, name, NAME+1) == -1)
+    if (read_from_tcp(fd, name, NAME+1) == -1)
         return;
     memset(start_value, '\0', MAX_4_SOME_INTS+1);
-    if (read_from_tcp_spaces(fd, start_value, MAX_4_SOME_INTS+1) == -1)
+    if (read_from_tcp(fd, start_value, MAX_4_SOME_INTS+1) == -1)
         return;
     memset(timeactive, '\0', MAX_4_SOME_INTS+1);
-    if (read_from_tcp_spaces(fd, timeactive, MAX_4_SOME_INTS+1) == -1)
+    if (read_from_tcp(fd, timeactive, MAX_4_SOME_INTS+1) == -1)
         return;
     memset(fname, '\0', FNAME+1);
-    if (read_from_tcp_spaces(fd, fname, FNAME+1) == -1)
+    if (read_from_tcp(fd, fname, FNAME+1) == -1)
         return;
     memset(fsize, '\0', FSIZE+1);
-    if (read_from_tcp_spaces(fd, fsize, FSIZE+1) == -1)
+    if (read_from_tcp(fd, fsize, FSIZE+1) == -1)
         return;
 
     memset(buffer, '\0', OPEN_RCV); // reset buffer
@@ -363,20 +310,20 @@ void close_auction(int fd, char *buffer) {
     char uid[UID+1], pass[PASSWORD+1], aid_auction[AID+1];
 
     memset(uid, '\0', UID+1);
-    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
+    if (read_from_tcp(fd, uid, UID+1) == -1)
         return;
     memset(pass, '\0', PASSWORD+1);
-    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+    if (read_from_tcp(fd, pass, PASSWORD+1) == -1)
         return;
     memset(aid_auction, '\0', AID+1);
-    if (read_from_tcp_spaces(fd, aid_auction, AID+1) == -1)
+    if (read_from_tcp(fd, aid_auction, AID+1) == -1)
         return;
 
     memset(buffer, '\0', OPEN_RCV); // reset buffer
     if(confirm_close(uid, pass, aid_auction, buffer) == -1) 
         return;
 
-    verify_auction_end();
+    verify_auction_end(aid_auction);
 
     process_close(uid, pass, aid_auction, buffer);
 }
@@ -387,7 +334,7 @@ int show_asset(int fd, char *buffer) {
     long fsize;
     
     memset(aid_auction, '\0', AID+1);
-    if (read_from_tcp_spaces(fd, aid_auction, AID+1) == -1)
+    if (read_from_tcp(fd, aid_auction, AID+1) == -1)
         return 0;
 
     memset(buffer, '\0', OPEN_RCV); // reset buffer
@@ -419,23 +366,23 @@ void bid(int fd, char *buffer) {
     char bid_value[MAX_4_SOME_INTS+1];
 
     memset(uid, '\0', UID+1);
-    if (read_from_tcp_spaces(fd, uid, UID+1) == -1)
+    if (read_from_tcp(fd, uid, UID+1) == -1)
         return;
     memset(pass, '\0', PASSWORD+1);
-    if (read_from_tcp_spaces(fd, pass, PASSWORD+1) == -1)
+    if (read_from_tcp(fd, pass, PASSWORD+1) == -1)
         return;
     memset(aid_bid, '\0', AID+1);
-    if (read_from_tcp_spaces(fd, aid_bid, AID+1) == -1)
+    if (read_from_tcp(fd, aid_bid, AID+1) == -1)
         return;
     memset(bid_value, '\0', MAX_4_SOME_INTS+1);
-    if (read_from_tcp_spaces(fd, bid_value, MAX_4_SOME_INTS+1) == -1)
+    if (read_from_tcp(fd, bid_value, MAX_4_SOME_INTS+1) == -1)
         return;
 
     memset(buffer, '\0', OPEN_RCV); // reset buffer
     if(confirm_bid(uid, pass, aid_bid, bid_value, buffer) == -1) 
         return;
 
-    verify_auction_end();
+    verify_auction_end(aid_bid);
     
     process_bid(uid, pass, aid_bid, bid_value, buffer);
 }
@@ -445,12 +392,12 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
     char host[NI_MAXHOST], service[NI_MAXSERV];
     int errcode;
 
+    // get the action to do
     memset(cmd, '\0', CMD_N_SPACE+1);
-    
     if (read_from_tcp(fd, cmd, CMD_N_SPACE) == -1)
         return;
 
-    memset(buffer, '\0', OPEN_RCV);
+    // get info about action to do and about the peer
     errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
     if(errcode==0)
         request_received(cmd,host,service,verbose_mode);
@@ -460,6 +407,7 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
     }
 
     /* Compare cmd with the list of possible udp actions */
+    memset(buffer, '\0', OPEN_RCV);
     if (!strcmp("OPA ", cmd)) 
         open_auction(fd, buffer);
     else if (!strcmp("CLS ", cmd))
@@ -471,7 +419,7 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
     else if (!strcmp("BID ", cmd))
         bid(fd, buffer);
     else
-        sprintf(buffer, "ERR: %s not valid\n", cmd);
+        sprintf(buffer, "ERR\n");
     
     write_to_tcp(fd, buffer);
 }
@@ -518,12 +466,11 @@ void tcp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=TCP_TIMEOUT;
+        timeout.tv_sec=BIG_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                //printf("\n ---------------TCP timeout event-----------------\n");
                 break;
             case -1:
                 printf("ERR: UDP: select\n");
@@ -546,11 +493,7 @@ void tcp() {
     close(fd);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////// MAIN ////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void filter_input(int argc, char **argv) {
     if (argc == 1) // only one argument no need for updates

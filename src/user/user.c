@@ -5,7 +5,7 @@
 char *as_ip = DEFAULT_IP;
 char *as_port = DEFAULT_PORT;
 char uid[UID+1], password[PASSWORD+1];
-char input_buffer[BUFFER_512];
+char input_buffer[BUFSIZ];
 int logged_in = 0;  // if logged in 1, if not logged in 0
 
 void filter_input(int argc, char **argv) {
@@ -34,7 +34,6 @@ int udp(char *buffer, size_t size, char *msg_received) {
     struct sockaddr_in addr;
     socklen_t addrlen;
     ssize_t n;
-    struct timeval send_timeout, recv_timeout;
 
     fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
     if(fd==-1) {//error
@@ -52,10 +51,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
         close(fd); return -1;
     }
 
-    /* Set send timeout */ 
-    send_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-    send_timeout.tv_usec = 0;
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+    if (set_send_timeout(fd, USER_TIMEOUT)) {
         printf("Can't connect with the server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
@@ -67,10 +63,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
         freeaddrinfo(res); close(fd); return -1;
     }
 
-    /* Set receive timeout */
-    recv_timeout.tv_sec = UDP_TIMEOUT; // 5 seconds timeout
-    recv_timeout.tv_usec = 0;
-    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
+    if (set_recv_timeout(fd, USER_TIMEOUT) == -1) {
         printf("Can't connect with the server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }

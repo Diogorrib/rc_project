@@ -7,10 +7,11 @@
 #define NI_MAXHOST 1025
 #define NI_MAXSERV 32
 
-#define UDP_TIMEOUT 3
-#define TCP_TIMEOUT 5
+#define SERVER_UDP_TIMEOUT 3
+#define SERVER_TCP_TIMEOUT 2
+#define USER_TIMEOUT 5
+#define BIG_TIMEOUT 30
 
-#define BUFFER_512 512
 #define FIRST_WORD 16
 #define MAX_4_SOME_INTS 6   // 6 is the max digits of some numbers
 #define DATE 10

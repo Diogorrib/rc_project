@@ -99,28 +99,37 @@ int read_end(const char *fname_end, char *msg) {
     return 0;
 }
 
-void verify_auction_end() {
-    char filepath[64], dirname[20], aid[AID+1];
-    int timeactive;
-    long starttime;
+void verify_all_end() {
+    char aid[AID+1];
+
     for (int i = 1; i <= MAX_AUCTION; i++) {
         memset(aid, '\0', AID+1);
         sprintf(aid, "%03d", i);
-        memset(dirname, '\0', 20);
-        sprintf(dirname, "AUCTIONS/%s", aid);
-        if(!verify_directory(dirname))  // auction does not exist
+        if (verify_auction_end(aid) == -1)  // last auction created
             break;
+    }
+}
 
+int verify_auction_end(const char *aid) {
+    char filepath[64], dirname[20];
+    int timeactive;
+    long starttime;
+
+    memset(dirname, '\0', 20);
+    sprintf(dirname, "AUCTIONS/%s", aid);
+    if(!verify_directory(dirname))  // auction does not exist
+        return -1;
+
+    memset(filepath, '\0', 64);
+    sprintf(filepath, "AUCTIONS/%s/END_%s.txt", aid, aid);
+    if (!verify_file(filepath)) {   // auction is active
         memset(filepath, '\0', 64);
-        sprintf(filepath, "AUCTIONS/%s/END_%s.txt", aid, aid);
-        if (!verify_file(filepath)) {   // auction is active
-            memset(filepath, '\0', 64);
-            sprintf(filepath, "AUCTIONS/%s/START_%s.txt", aid, aid);
-            if (read_start_file(filepath, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
-                create_end(aid, timeactive, starttime);
-            }
+        sprintf(filepath, "AUCTIONS/%s/START_%s.txt", aid, aid);
+        if (read_start_file(filepath, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
+            create_end(aid, timeactive, starttime);
         }
     }
+    return 0;
 }
 
 void get_auctions(const char *dirname, const char *cmd, char *msg) {
@@ -245,11 +254,7 @@ void process_logout(const char *uid, const char *pass, char *msg) {
         // if the uid_pass matches password: we can delete login file (if the file exists)
         if(!strcmp(existing_pass,pass)){
             if(verify_file(fname_login)){
-                if(delete_file(fname_login) == -1){
-                    sprintf(msg, "ERR\n");
-                    printf("ERR: Failed to delete file");
-                    return;
-                }
+                unlink(fname_login);
                 sprintf(msg, "RLO OK\n");
                 return;
             }
@@ -279,11 +284,8 @@ void process_unregister(const char *uid, const char *pass, char *msg) {
         // if the uid_pass matches password: we can delete login file and pass file (if the file exists)
         if(!strcmp(existing_pass,pass)){
             if(verify_file(fname_login)){
-                if((delete_file(fname_login) == -1) || (delete_file(fname_pass) == -1)){
-                    sprintf(msg, "ERR\n");
-                    printf("ERR: Failed to delete file");
-                    return;
-                }
+                unlink(fname_login);
+                unlink(fname_pass);
                 sprintf(msg, "RUR OK\n");
                 return;
             }
@@ -327,13 +329,13 @@ int process_open(const char *uid, const char *pass, const char *name, const char
                 return 0;
             }
             // if login file does not exist
-            delete_file(fname_asset); rmdir(dirname);
+            unlink(fname_asset); rmdir(dirname);
             sprintf(buffer, "ROA NLG\n");
             return -1;
         }
     }
     // if the pass file doesn't exist or uid_pass does not match password
-    delete_file(fname_asset); rmdir(dirname);
+    unlink(fname_asset); rmdir(dirname);
     sprintf(buffer, "ROA NOK\n");
     return -1;
 }

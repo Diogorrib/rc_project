@@ -78,7 +78,7 @@ int create_asset(int fd, const char *aid, const char *fname, const char *fsize) 
     long size = (long) atoi(fsize);
     if (create_file(filepath, dirname, NULL) == -1)
         return 0;
-    if (receive_file(fd, filepath, size) == -1) {
+    if (receive_file(fd, filepath, size, 2) == -1) {
         if (rmdir(dirname) != 0)
             printf("Directory %s not deleted.\n", dirname);
         return 0;
@@ -91,7 +91,7 @@ int create_asset(int fd, const char *aid, const char *fname, const char *fsize) 
 int create_end(const char *aid, int timeactive, long starttime) {
     char endfile[64];
     char dirname[20];
-    char fdata[BUFFER_512];
+    char fdata[BUFSIZ];
     time_t actual_time;
     time_t limit_time = (time_t) (starttime + (long)timeactive);
     char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
@@ -99,7 +99,7 @@ int create_end(const char *aid, int timeactive, long starttime) {
     time(&actual_time);
     if (actual_time >= limit_time) {
         convert_to_date(limit_time, time_str);
-        memset(fdata, '\0', BUFFER_512);
+        memset(fdata, '\0', BUFSIZ);
         sprintf(fdata, "%s %d\n", time_str, timeactive);
         sprintf(dirname, "AUCTIONS/%s",aid);
         sprintf(endfile, "%s/END_%s.txt",dirname,aid);
@@ -112,14 +112,14 @@ int create_end(const char *aid, int timeactive, long starttime) {
 int create_end_close(const char *aid, long starttime) {
     char endfile[64];
     char dirname[20];
-    char fdata[BUFFER_512];
+    char fdata[BUFSIZ];
     time_t actual_time;
     char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
     
     time(&actual_time);
     convert_to_date(actual_time, time_str);
     int timeactive = (int) (actual_time - (time_t) starttime);
-    memset(fdata, '\0', BUFFER_512);
+    memset(fdata, '\0', BUFSIZ);
     sprintf(fdata, "%s %d\n", time_str, timeactive);
     sprintf(dirname, "AUCTIONS/%s",aid);
     sprintf(endfile, "%s/END_%s.txt",dirname,aid);
@@ -131,7 +131,7 @@ int create_end_close(const char *aid, long starttime) {
 int create_bid_value(const char *uid, const char *aid, const char *value, long starttime) {
     char fname_auctions[64], fname_users[64];
     char dirname_auctions[20], dirname_users[20];
-    char fdata[BUFFER_512];
+    char fdata[BUFSIZ];
     time_t actual_time;
     char time_str[DATE_TIME+17]; // 17 because an error occurs when using just DATE_TIME+1 (the size required)
     int bid_value = atoi(value);
