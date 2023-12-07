@@ -77,7 +77,7 @@ int send_file(int fd, char *fname, long fsize) {
     memset(&act,0,sizeof act);
     act.sa_handler=SIG_IGN;
     if (sigaction(SIGPIPE,&act,NULL) == -1) {//error
-        printf("ERR: TCP: send_file\n");
+        printf("ERR: send_file: sigaction\n");
         return -1;
     }
 
@@ -92,18 +92,18 @@ int send_file(int fd, char *fname, long fsize) {
     while (fsize > 0) {
         bytesRead = fread(buffer, 1, BUFSIZ, file);
         if (bytesRead <= 0) {
-            printf("ERR: TCP: send_file: did not send all file\n");
+            printf("ERR: send_file: did not send all file\n");
             fclose(file); return -1;
         }
         nleft=(ssize_t)bytesRead; ptr=buffer;
         while (nleft>0) {
             if (set_send_timeout(fd, SERVER_TCP_TIMEOUT) == -1) {
-                printf("ERR: TCP: send_file: did not send all file\n");
+                printf("ERR: send_file: did not send all file\n");
                 fclose(file); return -1;
             }
             nwritten=write(fd,ptr,(size_t)nleft);
             if(nwritten <= 0) {    // closed by peer or timeout event
-                printf("ERR: TCP: send_file: did not send all file\n");
+                printf("ERR: send_file: did not send all file\n");
                 fclose(file); return -1;
             }
             nleft-=nwritten; ptr+=nwritten;
@@ -162,10 +162,10 @@ int receive_file(int fd, char *fname, long fsize, int timeout) {
     return 0;
 }
 
-void request_received(const char *msg, char *host, char *service, int mode) {
+void vmode_print(const char *msg, const char *host, const char *service, int mode) {
     if(mode) {
         printf("Request: %s", msg);
-        printf("       Sent by IP: %s\tPORT: %s]\n",host,service);
+        printf("\b | sent by IP: %s PORT: %s\n",host,service);
     }
 }
 
@@ -194,17 +194,6 @@ int is_alphanumeric_extra(const char *buffer) {
     for (int i = 0; i < len; i++) {
         if (!isdigit(buffer[i]) && !isalpha(buffer[i]) &&
             buffer[i] != '-' && buffer[i] != '_' && buffer[i] != '.')
-            return 0;
-    }
-    return 1;
-}
-
-int is_file_name(const char *buffer) {
-    size_t len = strlen(buffer);
-    if (len <= 4 || !is_alphanumeric_extra(buffer) || buffer[len-4] != '.')
-        return 0;
-    for (size_t i = len-3; i < len; i++) {
-        if (!isalpha(buffer[i]))
             return 0;
     }
     return 1;

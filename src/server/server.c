@@ -80,8 +80,11 @@ void show_record(char *buffer, char *msg) {
     process_sr(aid_record, msg);
 }
 
-void parse_udp_buffer(char *buffer, char *msg) {
+void parse_udp_buffer(char *buffer, char *msg, struct sockaddr_in addr, socklen_t addrlen) {
     char cmd[CMD_N_SPACE+1];
+    char host[NI_MAXHOST], service[NI_MAXSERV];
+    int errcode;
+    
     memset(msg, '\0', SR_RCV);
     if(buffer[LOGIN_SND-1] != '\0') {
         sprintf(msg, "ERR\n");
@@ -90,6 +93,15 @@ void parse_udp_buffer(char *buffer, char *msg) {
     // get the action to do
     memset(cmd, '\0', CMD_N_SPACE+1);
     memcpy(cmd, buffer, CMD_N_SPACE);
+
+    // get info about action to do and about the peer
+    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
+    if(errcode==0)
+        vmode_print(cmd,host,service,verbose_mode);
+    else {
+        printf("ERR: UDP: getnameinfo\n");
+        return;
+    }
 
     /* Compare cmd with the list of possible udp actions */
     if (!strcmp("LIN ", cmd))
@@ -119,7 +131,6 @@ void udp() {
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
     socklen_t addrlen;
-    char host[NI_MAXHOST], service[NI_MAXSERV];
 
     // UDP SERVER SECTION
     memset(&hints,0,sizeof(hints));
@@ -175,15 +186,7 @@ void udp() {
                         freeaddrinfo(res); close(fd); return;
                     }
 
-                    errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
-                    if(errcode==0)
-                        request_received(buffer,host,service,verbose_mode);
-                    else {
-                        printf("ERR: UDP: getnameinfo\n");
-                        freeaddrinfo(res); close(fd); return;
-                    }
-                    
-                    parse_udp_buffer(buffer, msg_sent);
+                    parse_udp_buffer(buffer, msg_sent, addr, addrlen);
                     
                     if (set_send_timeout(fd, SERVER_UDP_TIMEOUT) == -1) {
                         printf("ERR: UDP: send_timeout\n");
@@ -400,7 +403,7 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
     // get info about action to do and about the peer
     errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
     if(errcode==0)
-        request_received(cmd,host,service,verbose_mode);
+        vmode_print(cmd,host,service,verbose_mode);
     else {
         printf("ERR: TCP: getnameinfo\n");
         return;
@@ -523,7 +526,7 @@ int main(int argc, char **argv) {
         if (mkdir("AUCTIONS", 0700) == -1)
             return -1;
 
-    for(int i = 1; i < 999; i++) {
+    for(int i = 1; i < MAX_AUCTION; i++) {
         char dirname[20];
         sprintf(dirname, "AUCTIONS/%03d", i);
         if(!verify_directory(dirname))

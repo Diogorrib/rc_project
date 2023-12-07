@@ -3,11 +3,8 @@
 #include "process_server.h"
 #include "file_creation.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////// AUXILIARY FUNCTIONS ///////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////// READING FILES ///////////////////////////////////////////////////////
 
 int read_password_file(const char *fname, char *existing_pass) {
     /* Open file for reading */
@@ -71,7 +68,8 @@ int read_start(const char *fname_start, char *msg) {
     int start_value, timeactive;
     char datetime[DATE_TIME+1];
 
-    read_start_file(fname_start, host, name, fname, &start_value, &timeactive, datetime, NULL);
+    if (read_start_file(fname_start, host, name, fname, &start_value, &timeactive, datetime, NULL) == -1)
+        return -1;
     sprintf(msg + strlen(msg),"%s %s %s %d %s %d",
         host, name, fname, start_value, datetime, timeactive);
     return 0;
@@ -98,6 +96,8 @@ int read_end(const char *fname_end, char *msg) {
     sprintf(msg + strlen(msg)," E %s %s %d", date, hour, end_sec_time);
     return 0;
 }
+
+/////////////////////////////////////////// VERIFY AUCTIONS EXPIRED ///////////////////////////////////////////////////////
 
 void verify_all_end() {
     char aid[AID+1];
@@ -176,7 +176,8 @@ void get_highest_bid(const char *dirname, const char *start_file, char *bid_valu
     int has_a_file = 0;
     int start_value;
 
-    read_start_file(start_file, NULL, NULL, NULL, &start_value, NULL, NULL, NULL);
+    if (read_start_file(start_file, NULL, NULL, NULL, &start_value, NULL, NULL, NULL) == -1)
+        return;
 
     n_entries = scandir(dirname, &filelist, 0, alphasort);
     if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
@@ -199,11 +200,43 @@ void get_highest_bid(const char *dirname, const char *start_file, char *bid_valu
         sprintf(bid_value, "%06d", start_value);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////// PROCESS FUNCTIONS /////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void get_bids(const char *dirname, char *msg) {
+    struct dirent **filelist;
+    int n_entries;
+    char fname_bid[512];
+    char uid[UID+1], date[DATE+1], hour[HOUR+1];
+    int bid_value, bid_sec_time;
+    n_entries = scandir(dirname, &filelist, 0, alphasort);
+    if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
+        return;
+    }
+    int count = 0;
+    while(n_entries--) {
+        if (count < MAX_BIDS && strlen(filelist[n_entries]->d_name) == MAX_4_SOME_INTS+4) { // Discard '.' , '..' and invalid filenames by size
+            memset(fname_bid, '\0', 512);
+            sprintf(fname_bid, "%s/%s", dirname, filelist[n_entries]->d_name);
+            /* Open file for reading */
+            FILE *file = fopen(fname_bid, "rb");
+            if (file == NULL) {
+                printf("ERR: Failed to open file %s for reading\n", fname_bid);
+                return;
+            }
+            int result = fscanf(file, "%s %d %s %s %d", uid, &bid_value, date, hour, &bid_sec_time);
+            if(result != 5) {
+                printf("ERR: Failed to read file.\n");
+                fclose(file); return;
+            }
+            fclose(file);
+            
+            sprintf(msg + strlen(msg)," B %s %d %s %s %d", uid, bid_value, date, hour, bid_sec_time);
+            count++;
+        }
+        free(filelist[n_entries]);
+    }
+    free(filelist);
+}
+
+/////////////////////////////////////////// PROCESS ACTION FUNCTIONS /////////////////////////////////////////////////////////
 
 void process_login(const char *uid, const char *pass, char *msg) {
     char fname[64];
@@ -298,6 +331,101 @@ void process_unregister(const char *uid, const char *pass, char *msg) {
     sprintf(msg, "RUR UNR\n");
 }
 
+void process_ma(const char *uid, char *msg) {
+    char fname_login[64];
+    char hosted_dir[20];
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(hosted_dir, "USERS/%s/HOSTED", uid);
+
+    if(verify_file(fname_login)) {
+        if(verify_directory(hosted_dir)) {
+            get_auctions(hosted_dir, "RMA", msg);
+            return;
+        }
+        // HOSTED dir does not exist (user has no auctions)
+        sprintf(msg, "RMA NOK\n");
+        return;
+    }
+    // if login file does not exist
+    sprintf(msg, "RMA NLG\n");
+}
+
+void process_mb(const char *uid, char *msg) {
+    char fname_login[64];
+    char bidded_dir[20];
+    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
+    sprintf(bidded_dir, "USERS/%s/BIDDED", uid);
+
+    if(verify_file(fname_login)) {
+        if(verify_directory(bidded_dir)) {
+            get_auctions(bidded_dir, "RMB", msg);
+            return;
+        }
+        // BIDDED dir does not exist (user has no bids)
+        sprintf(msg, "RMB NOK\n");
+        return;
+    }
+    // if login file does not exist
+    sprintf(msg, "RMB NLG\n");
+}
+
+void process_list(char *msg) {
+    char fname_auction[64];
+    char dirname[20];
+    int has_a_file = 0;
+    for (int i = 1; i <= MAX_AUCTION; i++) {
+        memset(dirname, '\0', 20);
+        sprintf(dirname, "AUCTIONS/%03d", i);
+        if(!verify_directory(dirname))  // auction does not exist
+            break;
+
+        if (!has_a_file) {
+            has_a_file = 1;
+            sprintf(msg, "RLS OK");
+        }
+
+        memset(fname_auction, '\0', 64);
+        sprintf(fname_auction, "AUCTIONS/%03d/END_%03d.txt", i, i);
+        sprintf(msg + strlen(msg), " %03d", i);
+        if (verify_file(fname_auction)) // auction ended
+            sprintf(msg + strlen(msg), " 0");
+        else                            // auction active
+            sprintf(msg + strlen(msg), " 1");
+    }
+    if(!has_a_file) { // no auctions
+        sprintf(msg, "RLS NOK\n");
+        return;
+    }
+    sprintf(msg + strlen(msg), "\n");
+}
+
+void process_sr(const char *aid, char *msg) {
+    char fname_start[64];
+    char fname_end[64];
+    char dirname[20];
+    char bidded_dir[20];
+    sprintf(dirname, "AUCTIONS/%s", aid);
+    sprintf(bidded_dir, "AUCTIONS/%s/BIDS", aid);
+    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
+    sprintf(fname_end, "AUCTIONS/%s/END_%s.txt", aid, aid);
+
+    if(verify_directory(dirname)) {
+        sprintf(msg, "RRC OK ");
+        read_start(fname_start, msg);
+        if(verify_directory(bidded_dir)) {
+            get_bids(bidded_dir, msg);
+        }
+        // acresecntar end se existir
+        if(verify_file(fname_end)) {
+            read_end(fname_end, msg);
+        }
+        sprintf(msg + strlen(msg), "\n");
+        return;
+    }
+    // if auction does not exist
+    sprintf(msg, "RRC NOK\n");
+}
+
 int process_open(const char *uid, const char *pass, const char *name, const char *start_value,
                 const char *timeactive, const char *fname, const char *aid, char *buffer) {
     char fname_pass[64];
@@ -338,158 +466,6 @@ int process_open(const char *uid, const char *pass, const char *name, const char
     unlink(fname_asset); rmdir(dirname);
     sprintf(buffer, "ROA NOK\n");
     return -1;
-}
-
-void process_ma(const char *uid, char *msg) {
-    char fname_login[64];
-    char hosted_dir[20];
-    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(hosted_dir, "USERS/%s/HOSTED", uid);
-
-    if(verify_file(fname_login)) {
-        if(verify_directory(hosted_dir)) {
-            get_auctions(hosted_dir, "RMA", msg);
-            return;
-        }
-        // HOSTED dir does not exist (user has no auctions)
-        sprintf(msg, "RMA NOK\n");
-        return;
-    }
-    // if login file does not exist
-    sprintf(msg, "RMA NLG\n");
-}
-
-void process_mb(const char *uid, char *msg) {
-    char fname_login[64];
-    char bidded_dir[20];
-    sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(bidded_dir, "USERS/%s/BIDDED", uid);
-
-    if(verify_file(fname_login)) {
-        if(verify_directory(bidded_dir)) {
-            get_auctions(bidded_dir, "RMB", msg);
-            return;
-        }
-        // BIDDED dir does not exist (user has no bids)
-        sprintf(msg, "RMB NOK\n");
-        return;
-    }
-    // if login file does not exist
-    sprintf(msg, "RMB NLG\n");
-}
-
-void get_bids(const char *dirname, char *msg) {
-    struct dirent **filelist;
-    int n_entries;
-    char fname_bid[512];
-    char uid[UID+1], date[DATE+1], hour[HOUR+1];
-    int bid_value, bid_sec_time;
-    n_entries = scandir(dirname, &filelist, 0, alphasort);
-    if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
-        return;
-    }
-    int count = 0;
-    while(n_entries--) {
-        if (count < MAX_BIDS && strlen(filelist[n_entries]->d_name) == MAX_4_SOME_INTS+4) { // Discard '.' , '..' and invalid filenames by size
-            memset(fname_bid, '\0', 512);
-            sprintf(fname_bid, "%s/%s", dirname, filelist[n_entries]->d_name);
-            /* Open file for reading */
-            FILE *file = fopen(fname_bid, "rb");
-            if (file == NULL) {
-                printf("ERR: Failed to open file %s for reading\n", fname_bid);
-                return;
-            }
-            int result = fscanf(file, "%s %d %s %s %d", uid, &bid_value, date, hour, &bid_sec_time);
-            if(result != 5) {
-                printf("ERR: Failed to read file.\n");
-                fclose(file); return;
-            }
-            fclose(file);
-            
-            sprintf(msg + strlen(msg)," B %s %d %s %s %d", uid, bid_value, date, hour, bid_sec_time);
-            count++;
-        }
-        free(filelist[n_entries]);
-    }
-    free(filelist);
-}
-
-void process_sr(const char *aid, char *msg) {
-    char fname_start[64];
-    char fname_end[64];
-    char dirname[20];
-    char bidded_dir[20];
-    sprintf(dirname, "AUCTIONS/%s", aid);
-    sprintf(bidded_dir, "AUCTIONS/%s/BIDS", aid);
-    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
-    sprintf(fname_end, "AUCTIONS/%s/END_%s.txt", aid, aid);
-
-    if(verify_directory(dirname)) {
-        sprintf(msg, "RRC OK ");
-        read_start(fname_start, msg);
-        if(verify_directory(bidded_dir)) {
-            get_bids(bidded_dir, msg);
-        }
-        // acresecntar end se existir
-        if(verify_file(fname_end)) {
-            read_end(fname_end, msg);
-        }
-        sprintf(msg + strlen(msg), "\n");
-        return;
-    }
-    // if auction does not exist
-    sprintf(msg, "RRC NOK\n");
-}
-
-int process_sa(const char *aid, char *fname, long *fsize, char *msg) {
-    char dirname[20];
-    char filepath[64];
-    char fname_start[64];
-    sprintf(dirname, "AUCTIONS/%s", aid);
-    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
-
-    if(verify_directory(dirname)) {
-        read_start_file(fname_start, NULL, NULL, fname, NULL, NULL, NULL, NULL);
-        sprintf(filepath,"AUCTIONS/%s/%s", aid, fname);
-        if (get_file_size(filepath, fsize) == -1) {
-            sprintf(msg, "RSA NOK\n");
-            return -1;
-        }
-        return 0;
-    }
-    // if auction does not exist
-    sprintf(msg, "RSA NOK\n");
-    return -1;
-}
-
-void process_list(char *msg) {
-    char fname_auction[64];
-    char dirname[20];
-    int has_a_file = 0;
-    for (int i = 1; i <= MAX_AUCTION; i++) {
-        memset(dirname, '\0', 20);
-        sprintf(dirname, "AUCTIONS/%03d", i);
-        if(!verify_directory(dirname))  // auction does not exist
-            break;
-
-        if (!has_a_file) {
-            has_a_file = 1;
-            sprintf(msg, "RLS OK");
-        }
-
-        memset(fname_auction, '\0', 64);
-        sprintf(fname_auction, "AUCTIONS/%03d/END_%03d.txt", i, i);
-        sprintf(msg + strlen(msg), " %03d", i);
-        if (verify_file(fname_auction)) // auction ended
-            sprintf(msg + strlen(msg), " 0");
-        else                            // auction active
-            sprintf(msg + strlen(msg), " 1");
-    }
-    if(!has_a_file) { // no auctions
-        sprintf(msg, "RLS NOK\n");
-        return;
-    }
-    sprintf(msg + strlen(msg), "\n");
 }
 
 void process_close(const char *uid, const char *pass, const char *aid, char *buffer) {
@@ -543,6 +519,27 @@ void process_close(const char *uid, const char *pass, const char *aid, char *buf
         }
     }
     sprintf(buffer, "ERR\n");
+}
+
+int process_sa(const char *aid, char *fname, long *fsize, char *msg) {
+    char dirname[20];
+    char filepath[64];
+    char fname_start[64];
+    sprintf(dirname, "AUCTIONS/%s", aid);
+    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
+
+    if(verify_directory(dirname)) {
+        read_start_file(fname_start, NULL, NULL, fname, NULL, NULL, NULL, NULL);
+        sprintf(filepath,"AUCTIONS/%s/%s", aid, fname);
+        if (get_file_size(filepath, fsize) == -1) {
+            sprintf(msg, "RSA NOK\n");
+            return -1;
+        }
+        return 0;
+    }
+    // if auction does not exist
+    sprintf(msg, "RSA NOK\n");
+    return -1;
 }
 
 void process_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer) {

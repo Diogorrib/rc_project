@@ -20,7 +20,7 @@ void myauctions(char *buffer, char *msg);
 void mybids(char *buffer, char *msg);
 void show_record(char *buffer, char *msg);
 
-void parse_udp_buffer(char *buffer, char *msg);
+void parse_udp_buffer(char *buffer, char *msg, struct sockaddr_in addr, socklen_t addrlen);
 
 void udp();
 

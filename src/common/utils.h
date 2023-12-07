@@ -85,7 +85,7 @@ int receive_file(int fd, char *fname, long fsize, int timeout);
 /// @param host 
 /// @param service 
 /// @param mode 
-void request_received(const char *msg, char *host, char *service, int mode);
+void vmode_print(const char *msg, const char *host, const char *service, int mode);
 
 ////////////////////////////////////// STRING VERIFICATION ////////////////////////////////////////
 
@@ -103,12 +103,6 @@ int is_alphanumeric(const char *buffer);
 /// @param buffer 
 /// @return 1 if true 0 if false
 int is_alphanumeric_extra(const char *buffer);
-
-/// @brief Verify if the buffer is only digits and letters plus '-', '_' and '.',
-/// and the buffer ends with .xxx
-/// @param buffer 
-/// @return 1 if true 0 if false
-int is_file_name(const char *buffer);
 
 /// @brief Verify if the buffer is a date time string
 /// @param buffer 
