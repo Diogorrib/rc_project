@@ -209,12 +209,12 @@ void udp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=USER_TIMEOUT;
+        timeout.tv_sec=BIG_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                printf("------------------UDP------------------\n");
+                //printf("------------------UDP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
@@ -552,12 +552,12 @@ void tcp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=USER_TIMEOUT;
+        timeout.tv_sec=BIG_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                printf("------------------TCP------------------\n");
+                //printf("------------------TCP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
