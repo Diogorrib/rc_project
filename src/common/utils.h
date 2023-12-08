@@ -85,7 +85,19 @@ int receive_file(int fd, char *fname, long fsize, int timeout);
 /// @param host 
 /// @param service 
 /// @param mode 
-void vmode_print(const char *msg, const char *host, const char *service, int mode);
+void vmode_request(const char *msg, const char *host, const char *service, int mode);
+
+/// @brief Print the verbose mode message if it is active
+/// @param msg 
+/// @param host 
+/// @param service 
+/// @param mode 
+void vmode_response(const char *msg, const char *host, const char *service, int mode);
+
+/// @brief Print the verbose mode message if it is active
+/// @param msg 
+/// @param mode 
+void vmode_more_info(const char *msg, int mode);
 
 ////////////////////////////////////// STRING VERIFICATION ////////////////////////////////////////
 

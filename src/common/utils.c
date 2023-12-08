@@ -162,11 +162,22 @@ int receive_file(int fd, char *fname, long fsize, int timeout) {
     return 0;
 }
 
-void vmode_print(const char *msg, const char *host, const char *service, int mode) {
+void vmode_request(const char *msg, const char *host, const char *service, int mode) {
     if(mode) {
         printf("Request: %s", msg);
-        printf("\b | sent by IP: %s PORT: %s\n",host,service);
+        printf(" | sent by IP: %s PORT: %s\n",host,service);
     }
+}
+
+void vmode_response(const char *msg, const char *host, const char *service, int mode) {
+    if(mode) {
+        printf("Response: %s", msg);
+        printf(" | sent to IP: %s PORT: %s\n",host,service);
+    }
+}
+
+void vmode_more_info(const char *msg, int mode) {
+    if(mode) printf("%s", msg);
 }
 
 ////////////////////////////////////// STRING VERIFICATION ////////////////////////////////////////
