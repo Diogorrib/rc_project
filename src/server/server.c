@@ -193,11 +193,11 @@ void udp() {
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        vmode_more_info("ERR: UDP: socket\n", verbose_mode); return;
+        vmode_more_info("ERR: UDP: socket\n", verbose_mode); freeaddrinfo(res); return;
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        vmode_more_info("ERR: UDP: bind\n", verbose_mode); close(fd); return;
+        vmode_more_info("ERR: UDP: bind\n", verbose_mode); freeaddrinfo(res); close(fd); return;
     }
     if(res!=NULL) freeaddrinfo(res);
 
@@ -209,11 +209,12 @@ void udp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=BIG_TIMEOUT;
+        timeout.tv_sec=USER_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
+                printf("------------------UDP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
@@ -531,16 +532,16 @@ void tcp() {
 
     fd=socket(res->ai_family,res->ai_socktype,res->ai_protocol);
     if(fd == -1) {
-        vmode_more_info("ERR: TCP: socket\n", verbose_mode); return;
+        vmode_more_info("ERR: TCP: socket\n", verbose_mode); freeaddrinfo(res); return;
     }
 
     if(bind(fd,res->ai_addr,res->ai_addrlen)==-1) {
-        vmode_more_info("ERR: TCP: bind\n", verbose_mode); close(fd); return;
+        vmode_more_info("ERR: TCP: bind\n", verbose_mode); freeaddrinfo(res); close(fd); return;
     }
     if(res!=NULL) freeaddrinfo(res);
 
     if(listen(fd,5) == -1) {
-        vmode_more_info("ERR: TCP: listen\n", verbose_mode); close(fd); return;
+        vmode_more_info("ERR: TCP: listen\n", verbose_mode); freeaddrinfo(res); close(fd); return;
     }
 
     FD_ZERO(&inputs); // Clear input mask
@@ -551,11 +552,12 @@ void tcp() {
     while(1) {
         testfds=inputs; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=BIG_TIMEOUT;
+        timeout.tv_sec=USER_TIMEOUT;
 
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
+                printf("------------------TCP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
@@ -595,16 +597,16 @@ void filter_input(int argc, char **argv) {
     }
 }
 
+/* End process when SIGCHLD is received */
 void childSignalHandler() {
-    int status;
-    wait(&status);
-    vmode_more_info("ERR: exit child process\n", verbose_mode);
+    int status; wait(&status);
+    vmode_more_info("...Exit TCP process\n", verbose_mode);
     exit(1);
 }
 
 int main(int argc, char **argv) {
-    struct sigaction action;
-    pid_t childPid;
+    struct sigaction act;
+    pid_t child_pid;
 
     filter_input(argc, argv);
 
@@ -624,25 +626,31 @@ int main(int argc, char **argv) {
         aid++;
     }
 
-    action.sa_handler = childSignalHandler;
-    sigemptyset (&action.sa_mask);
-    action.sa_flags = 0;
-    if (sigaction(SIGCHLD, &action, NULL) == -1) {//error
+    /* End parent (TCP) process when child end */
+    act.sa_handler = childSignalHandler;
+    sigemptyset (&act.sa_mask);
+    act.sa_flags = 0;
+    if (sigaction(SIGCHLD, &act, NULL) == -1) {//error
         vmode_more_info("ERR: child handler\n", verbose_mode);
         return -1;
     }
 
-    switch (childPid = fork()) {
+    /* Create a child process to have UDP and TCP processes */
+    switch (child_pid = fork()) {
     case -1:
         vmode_more_info("ERR: creating child process\n", verbose_mode);
         return -1;
 
-    case 0: // udp process
+    case 0: // UDP process
         udp();
+        vmode_more_info("ERR: Exit UDP process...\n", verbose_mode);
         break;
 
-    default: // tcp process
+    default: // TCP process
         tcp();
+        vmode_more_info("ERR: Exit TCP process...\n", verbose_mode);
+        kill(child_pid, SIGKILL); // End child (UDP) process when parent end
+        vmode_more_info("...Exit UDP process\n", verbose_mode);
         break;
     }
     return 0;
