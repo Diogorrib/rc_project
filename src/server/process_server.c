@@ -18,7 +18,6 @@ int read_password_file(const char *fname, char *existing_pass) {
         printf("ERR: Failed to read the 8 characters of the password.\n");
         fclose(file); return -1;
     }
-    // Add null terminator
     existing_pass[bytesRead] = '\0';
     fclose(file);
     return 0;
@@ -102,7 +101,6 @@ void verify_all_end() {
     char aid[AID+1];
 
     for (int i = 1; i <= MAX_AUCTION; i++) {
-        memset(aid, '\0', AID+1);
         sprintf(aid, "%03d", i);
         if (verify_auction_end(aid) == -1)  // last auction created
             break;
@@ -110,22 +108,19 @@ void verify_all_end() {
 }
 
 int verify_auction_end(const char *aid) {
-    char filepath[64], dirname[20];
+    char filepath[FILEPATH], dirname[DIRNAME];
     int timeactive;
     long starttime;
 
-    memset(dirname, '\0', 20);
     sprintf(dirname, "AUCTIONS/%s", aid);
     if(!verify_directory(dirname))  // auction does not exist
         return -1;
 
-    memset(filepath, '\0', 64);
     sprintf(filepath, "AUCTIONS/%s/END_%s.txt", aid, aid);
     if (!verify_file(filepath)) {   // auction is active
-        memset(filepath, '\0', 64);
         sprintf(filepath, "AUCTIONS/%s/START_%s.txt", aid, aid);
         if (read_start_file(filepath, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
-            create_end(aid, timeactive, starttime);
+            create_end_if_expired(aid, timeactive, starttime);
         }
     }
     return 0;
@@ -135,11 +130,10 @@ int verify_auction_end(const char *aid) {
 
 void get_auctions(const char *dirname, const char *cmd, char *msg) {
     struct dirent **filelist;
-    int n_entries;
-    char fname_auction[64];
+    char fname_end[FILEPATH];
     char aid[AID+1];
     int has_a_file = 0;
-    n_entries = scandir(dirname, &filelist, 0, alphasort);
+    int n_entries = scandir(dirname, &filelist, 0, alphasort);
     if (n_entries <= 0) {// Could test for -1 since n_entries count always with . and ..
         sprintf(msg, "%s NOK\n", cmd);
         return;
@@ -152,11 +146,10 @@ void get_auctions(const char *dirname, const char *cmd, char *msg) {
                 sprintf(msg, "%s OK", cmd);
             }
             memset(aid, '\0', AID+1);
-            memset(fname_auction, '\0', 64);
             memcpy(aid, filelist[i]->d_name, AID);    // get aid from file name
-            sprintf(fname_auction, "AUCTIONS/%s/END_%s.txt", aid, aid);
+            sprintf(fname_end, "AUCTIONS/%s/END_%s.txt", aid, aid);
             sprintf(msg + strlen(msg), " %s", aid);
-            if (verify_file(fname_auction)) // auction ended
+            if (verify_file(fname_end)) // auction ended
                 sprintf(msg + strlen(msg), " 0");
             else                            // auction active
                 sprintf(msg + strlen(msg), " 1");
@@ -174,7 +167,7 @@ void get_auctions(const char *dirname, const char *cmd, char *msg) {
 void get_bids(const char *dirname, char *msg) {
     struct dirent **filelist;
     int n_entries;
-    char fname_bid[512];
+    char fname_bid[BUFSIZ];
     char uid[UID+1], date[DATE+1], hour[HOUR+1];
     int bid_value, bid_sec_time;
     n_entries = scandir(dirname, &filelist, 0, alphasort);
@@ -184,7 +177,6 @@ void get_bids(const char *dirname, char *msg) {
     int count = 0;
     while(n_entries--) {
         if (count < MAX_BIDS && strlen(filelist[n_entries]->d_name) == MAX_4_SOME_INTS+4) { // Discard '.' , '..' and invalid filenames by size
-            memset(fname_bid, '\0', 512);
             sprintf(fname_bid, "%s/%s", dirname, filelist[n_entries]->d_name);
             /* Open file for reading */
             FILE *file = fopen(fname_bid, "rb");
@@ -240,12 +232,12 @@ void get_highest_bid(const char *dirname, const char *start_file, char *bid_valu
 /////////////////////////////////////////// UDP ///////////////////////////////////////////////////////////////////////
 
 int process_login(const char *uid, const char *pass, char *msg) {
-    char fname[64];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
-    sprintf(fname, "USERS/%s/%s_pass.txt", uid, uid);
+    char fname_pass[FILEPATH];
+    char existing_pass[PASSWORD+1];
+    sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
 
-    if(verify_file(fname)) {
-        if (read_password_file(fname, existing_pass) == -1) {
+    if(verify_file(fname_pass)) {
+        if (read_password_file(fname_pass, existing_pass) == -1) {
             sprintf(msg, "ERR\n");
             return 0;
         }
@@ -275,8 +267,9 @@ int process_login(const char *uid, const char *pass, char *msg) {
 }
 
 int process_logout(const char *uid, const char *pass, char *msg) {
-    char fname_login[64], fname_pass[64];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    char fname_login[FILEPATH], fname_pass[FILEPATH];
+    char existing_pass[PASSWORD+1];
+
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
     sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
 
@@ -305,9 +298,9 @@ int process_logout(const char *uid, const char *pass, char *msg) {
 }
 
 int process_unregister(const char *uid, const char *pass, char *msg) {
-    char fname_pass[64];
-    char fname_login[64];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    char fname_pass[FILEPATH], fname_login[FILEPATH];
+    char existing_pass[PASSWORD+1];
+
     sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
 
@@ -336,14 +329,15 @@ int process_unregister(const char *uid, const char *pass, char *msg) {
 }
 
 int process_ma(const char *uid, char *msg) {
-    char fname_login[64];
-    char hosted_dir[20];
+    char fname_login[FILEPATH];
+    char hosted_dirname[DIRNAME];
+
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(hosted_dir, "USERS/%s/HOSTED", uid);
+    sprintf(hosted_dirname, "USERS/%s/HOSTED", uid);
 
     if(verify_file(fname_login)) {
-        if(verify_directory(hosted_dir)) {
-            get_auctions(hosted_dir, "RMA", msg);
+        if(verify_directory(hosted_dirname)) {
+            get_auctions(hosted_dirname, "RMA", msg);
             return 1;
         }
         // HOSTED dir does not exist (user has no auctions)
@@ -356,14 +350,15 @@ int process_ma(const char *uid, char *msg) {
 }
 
 int process_mb(const char *uid, char *msg) {
-    char fname_login[64];
-    char bidded_dir[20];
+    char fname_login[FILEPATH];
+    char bidded_dirname[DIRNAME];
+
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(bidded_dir, "USERS/%s/BIDDED", uid);
+    sprintf(bidded_dirname, "USERS/%s/BIDDED", uid);
 
     if(verify_file(fname_login)) {
-        if(verify_directory(bidded_dir)) {
-            get_auctions(bidded_dir, "RMB", msg);
+        if(verify_directory(bidded_dirname)) {
+            get_auctions(bidded_dirname, "RMB", msg);
             return 1;
         }
         // BIDDED dir does not exist (user has no bids)
@@ -376,13 +371,12 @@ int process_mb(const char *uid, char *msg) {
 }
 
 int process_list(char *msg) {
-    char fname_auction[64];
-    char dirname[20];
+    char fname_end[FILEPATH];
+    char aid_dirname[DIRNAME];
     int has_a_file = 0;
     for (int i = 1; i <= MAX_AUCTION; i++) {
-        memset(dirname, '\0', 20);
-        sprintf(dirname, "AUCTIONS/%03d", i);
-        if(!verify_directory(dirname))  // auction does not exist
+        sprintf(aid_dirname, "AUCTIONS/%03d", i);
+        if(!verify_directory(aid_dirname))  // auction does not exist
             break;
 
         if (!has_a_file) {
@@ -390,10 +384,9 @@ int process_list(char *msg) {
             sprintf(msg, "RLS OK");
         }
 
-        memset(fname_auction, '\0', 64);
-        sprintf(fname_auction, "AUCTIONS/%03d/END_%03d.txt", i, i);
+        sprintf(fname_end, "%s/END_%03d.txt", aid_dirname, i);
         sprintf(msg + strlen(msg), " %03d", i);
-        if (verify_file(fname_auction)) // auction ended
+        if (verify_file(fname_end)) // auction ended
             sprintf(msg + strlen(msg), " 0");
         else                            // auction active
             sprintf(msg + strlen(msg), " 1");
@@ -407,20 +400,19 @@ int process_list(char *msg) {
 }
 
 int process_sr(const char *aid, char *msg) {
-    char fname_start[64];
-    char fname_end[64];
-    char dirname[20];
-    char bidded_dir[20];
-    sprintf(dirname, "AUCTIONS/%s", aid);
-    sprintf(bidded_dir, "AUCTIONS/%s/BIDS", aid);
-    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
-    sprintf(fname_end, "AUCTIONS/%s/END_%s.txt", aid, aid);
+    char fname_start[FILEPATH], fname_end[FILEPATH];
+    char aid_dirname[DIRNAME], bids_dirname[DIRNAME];
 
-    if(verify_directory(dirname)) {
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
+    sprintf(bids_dirname, "AUCTIONS/%s/BIDS", aid);
+    sprintf(fname_start,"%s/START_%s.txt", aid_dirname, aid);
+    sprintf(fname_end, "%s/END_%s.txt", aid_dirname, aid);
+
+    if(verify_directory(aid_dirname)) {
         sprintf(msg, "RRC OK ");
         read_start(fname_start, msg);
-        if(verify_directory(bidded_dir)) {
-            get_bids(bidded_dir, msg);
+        if(verify_directory(bids_dirname)) {
+            get_bids(bids_dirname, msg);
         }
         // acresecntar end se existir
         if(verify_file(fname_end)) {
@@ -438,17 +430,16 @@ int process_sr(const char *aid, char *msg) {
 
 int process_open(const char *uid, const char *pass, const char *name, const char *start_value,
                 const char *timeactive, const char *fname, const char *aid, char *buffer) {
-    char fname_pass[64];
-    char fname_login[64];
-    char fname_asset[64];
-    char dirname[20];
-    char fdata[1024];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    char fname_pass[FILEPATH], fname_login[FILEPATH], fname_asset[FILEPATH];
+    char aid_dirname[DIRNAME];
+    char fdata[BUFSIZ];
+    char existing_pass[PASSWORD+1];
+
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
     sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(fname_asset, "AUCTIONS/%s/%s", aid, fname);
-    sprintf(dirname, "AUCTIONS/%s", aid);
-
+    sprintf(fname_asset, "%s/%s", aid_dirname, fname);
+    
     if(verify_file(fname_pass)) {
         if (read_password_file(fname_pass, existing_pass) == -1) {
             sprintf(buffer, "ERR\n");
@@ -467,34 +458,31 @@ int process_open(const char *uid, const char *pass, const char *name, const char
                 return 1;
             }
             // if login file does not exist
-            unlink(fname_asset); rmdir(dirname);
+            unlink(fname_asset); rmdir(aid_dirname);
             sprintf(buffer, "ROA NLG\n");
             return 0;
         }
     }
     // if the pass file doesn't exist or uid_pass does not match password
-    unlink(fname_asset); rmdir(dirname);
+    unlink(fname_asset); rmdir(aid_dirname);
     sprintf(buffer, "ROA NOK\n");
     return 0;
 }
 
 int process_close(const char *uid, const char *pass, const char *aid, char *buffer) {
-    char fname_pass[64];
-    char fname_login[64];
-    char fname_auction[64];
-    char fname_start[64];
-    char fname_hosted[64];
-    char aid_dirname[20];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    char fname_pass[FILEPATH], fname_login[FILEPATH];
+    char fname_start[FILEPATH], fname_end[FILEPATH], fname_hosted[FILEPATH];
+    char aid_dirname[DIRNAME];
+    char existing_pass[PASSWORD+1];
     int timeactive;
     long starttime;
     
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
     sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(aid_dirname, "AUCTIONS/%s", aid);
-    sprintf(fname_auction, "AUCTIONS/%s/END_%s.txt", aid, aid);
+    sprintf(fname_start, "%s/START_%s.txt", aid_dirname, aid);
+    sprintf(fname_end, "%s/END_%s.txt", aid_dirname, aid);
     sprintf(fname_hosted, "USERS/%s/HOSTED/%s.txt", uid, aid);
-    sprintf(fname_start, "AUCTIONS/%s/START_%s.txt", aid, aid);
     
     if(verify_file(fname_pass)){
         if (read_password_file(fname_pass, existing_pass) == -1 || strcmp(existing_pass,pass)) {
@@ -517,7 +505,7 @@ int process_close(const char *uid, const char *pass, const char *aid, char *buff
             return 0;
         }
         
-        if(verify_file(fname_auction)) { // auction not active
+        if(verify_file(fname_end)) { // auction not active
             sprintf(buffer, "RCL END\n");
             return 0;
         }
@@ -533,16 +521,16 @@ int process_close(const char *uid, const char *pass, const char *aid, char *buff
 }
 
 int process_sa(const char *aid, char *fname, long *fsize, char *msg) {
-    char dirname[20];
-    char filepath[64];
-    char fname_start[64];
-    sprintf(dirname, "AUCTIONS/%s", aid);
-    sprintf(fname_start,"AUCTIONS/%s/START_%s.txt", aid, aid);
+    char fname_start[FILEPATH], fname_asset[FILEPATH];
+    char aid_dirname[DIRNAME];
 
-    if(verify_directory(dirname)) {
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
+    sprintf(fname_start,"%s/START_%s.txt", aid_dirname, aid);
+
+    if(verify_directory(aid_dirname)) {
         read_start_file(fname_start, NULL, NULL, fname, NULL, NULL, NULL, NULL);
-        sprintf(filepath,"AUCTIONS/%s/%s", aid, fname);
-        if (get_file_size(filepath, fsize) == -1) {
+        sprintf(fname_asset,"%s/%s", aid_dirname, fname);
+        if (get_file_size(fname_asset, fsize) == -1) {  // problem with asset file
             sprintf(msg, "RSA NOK\n");
             return 0;
         }
@@ -554,25 +542,21 @@ int process_sa(const char *aid, char *fname, long *fsize, char *msg) {
 }
 
 int process_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer) {
-    char fname_pass[64];
-    char fname_login[64];
-    char fname_auction[64];
-    char fname_start[64];
-    char fname_hosted[64];
-    char aid_dirname[20];
-    char bid_dirname[20];
+    char fname_pass[FILEPATH], fname_login[FILEPATH];
+    char fname_start[FILEPATH], fname_end[FILEPATH], fname_hosted[FILEPATH];
+    char aid_dirname[DIRNAME], bids_dirname[DIRNAME];
     char highest_bid[MAX_4_SOME_INTS+1];
-    char existing_pass[PASSWORD+1]; // 8 letters plus '\0' to terminate the string
+    char existing_pass[PASSWORD+1];
     int timeactive;
     long starttime;
     
+    sprintf(aid_dirname, "AUCTIONS/%s", aid);
+    sprintf(bids_dirname, "AUCTIONS/%s/BIDS", aid);
     sprintf(fname_pass, "USERS/%s/%s_pass.txt", uid, uid);
     sprintf(fname_login, "USERS/%s/%s_login.txt", uid, uid);
-    sprintf(aid_dirname, "AUCTIONS/%s", aid);
-    sprintf(bid_dirname, "AUCTIONS/%s/BIDS", aid);
-    sprintf(fname_auction, "AUCTIONS/%s/END_%s.txt", aid, aid);
+    sprintf(fname_start, "%s/START_%s.txt", aid_dirname, aid);
+    sprintf(fname_end, "%s/END_%s.txt", aid_dirname, aid);
     sprintf(fname_hosted, "USERS/%s/HOSTED/%s.txt", uid, aid);
-    sprintf(fname_start, "AUCTIONS/%s/START_%s.txt", aid, aid);
     
     if(verify_file(fname_pass) && verify_directory(aid_dirname)){
         if (read_password_file(fname_pass, existing_pass) == -1 || strcmp(existing_pass,pass)) {
@@ -580,7 +564,7 @@ int process_bid(const char *uid, const char *pass, const char *aid, const char *
             return 0;
         }
         
-        if(verify_file(fname_auction)) { // auction not active
+        if(verify_file(fname_end)) { // auction not active
             sprintf(buffer, "RBD NOK\n");
             return 0;
         }
@@ -589,7 +573,7 @@ int process_bid(const char *uid, const char *pass, const char *aid, const char *
             return 0;
         }
 
-        get_highest_bid(bid_dirname, fname_start, highest_bid);
+        get_highest_bid(bids_dirname, fname_start, highest_bid);
         int int_highest_bid = atoi(highest_bid);
         int int_bid_value = atoi(bid_value);
 
@@ -604,7 +588,7 @@ int process_bid(const char *uid, const char *pass, const char *aid, const char *
         }
         
         if (read_start_file(fname_start, NULL, NULL, NULL, NULL, &timeactive, NULL, &starttime) != -1) {
-            create_bid_value(uid, aid, bid_value, starttime);
+            create_bid_files(uid, aid, bid_value, starttime);
             sprintf(buffer, "RBD ACC\n");
             return 1;
         }

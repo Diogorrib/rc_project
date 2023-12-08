@@ -595,11 +595,18 @@ void filter_input(int argc, char **argv) {
     }
 }
 
+void childSignalHandler() {
+    int status;
+    wait(&status);
+    vmode_more_info("ERR: exit child process\n", verbose_mode);
+    exit(1);
+}
+
 int main(int argc, char **argv) {
+    struct sigaction action;
+    pid_t childPid;
 
     filter_input(argc, argv);
-
-    pid_t childPid;
 
     /* Create main directories */
     if(!verify_directory("USERS"))
@@ -617,6 +624,14 @@ int main(int argc, char **argv) {
         aid++;
     }
 
+    action.sa_handler = childSignalHandler;
+    sigemptyset (&action.sa_mask);
+    action.sa_flags = 0;
+    if (sigaction(SIGCHLD, &action, NULL) == -1) {//error
+        vmode_more_info("ERR: child handler\n", verbose_mode);
+        return -1;
+    }
+
     switch (childPid = fork()) {
     case -1:
         vmode_more_info("ERR: creating child process\n", verbose_mode);
@@ -628,8 +643,7 @@ int main(int argc, char **argv) {
 
     default: // tcp process
         tcp();
-        pid_t child_pid = waitpid(-1, NULL, 0); // wait for child process to end
-        (void) child_pid;
+        break;
     }
     return 0;
 }

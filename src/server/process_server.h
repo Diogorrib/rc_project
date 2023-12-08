@@ -46,11 +46,30 @@ int verify_auction_end(const char *aid);
 
 ////////////////////////////////////// GET LISTS AND HIGHEST VALUES ///////////////////////////////////////////////////
 
+/// @brief Scan HOSTED or BIDDED directory and append to msg all AIDs in that directory,
+/// and their state (active or not active), sorted by AID ascending.
+/// If there is no file the msg content is NOK
+/// @param dirname should be HOSTED or BIDDED directory
+/// @param cmd 
+/// @param msg 
 void get_auctions(const char *dirname, const char *cmd, char *msg);
+
+/// @brief Scan BIDS directory and append to msg the 50 highest bids in that directory,
+/// and relevant content to show record command, sorted by bid value descending.
+/// If there is no file the content appended to the msg is empty
+/// @param dirname should be BIDS directory
+/// @param msg 
 void get_bids(const char *dirname, char *msg);
+
+/// @brief Scan BIDS directory and get to bid_value the value of the highest bid in that directory,
+/// if there is no file the highest bid is the value present in start_file
+/// @param dirname should be BIDS directory
+/// @param start_file should be a START_(aid).txt file
+/// @param bid_value 
 void get_highest_bid(const char *dirname, const char *start_file, char *bid_value);
 
 /////////////////////////////////////////// UDP ///////////////////////////////////////////////////////////////////////
+/* The following functions return 1 if the command is performed and 0 if the command is not performed */
 
 int process_login(const char *uid, const char *pass, char *msg);
 int process_logout(const char *uid, const char *pass, char *msg);
@@ -61,6 +80,7 @@ int process_list(char *msg);
 int process_sr(const char *aid, char *msg);
 
 /////////////////////////////////////////// TCP ///////////////////////////////////////////////////////////////////////
+/* The following functions return 1 if the command is performed and 0 if the command is not performed */
 
 int process_open(const char *uid, const char *pass, const char *name, const char *start_value,
                 const char *timeactive, const char *fname, const char *aid, char *buffer);
