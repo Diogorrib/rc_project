@@ -2,86 +2,18 @@
 #include "../common/utils.h"
 #include "process_user.h"
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// HELPER FUNCTIONS TO PROCESS COMMANDS //////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 void get_cmd_status(char *msg, char * cmd, char *status) {
-    memcpy(cmd, msg, CMD_N_SPACE);
-    cmd[CMD_N_SPACE] = '\0';
-    memcpy(status, msg+CMD_N_SPACE, STATUS);
-    status[STATUS] = '\0';
-}
-
-int process_login(char *msg, char *uid) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-
-    get_cmd_status(msg, command, status);
-
-    if(strcmp(command, "RLI ") || msg[8] != '\0') {
-        printf("%s", msg);
-        return 0;
-    }
-    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
-        printf("successful login\n");
-        return 1;
-    }
-    if(!strcmp(status, "NOK\n")) {
-        printf("incorrect login attempt\n");
-        return 0;
-    }
-    if(!strcmp(status, "REG\n")) {
-        printf("new %s registered\n", uid);
-        return 1;
-    }
-    printf("%s", msg);
-    return 0;
-}
-
-int process_logout(char *msg, const char *uid) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-
-    get_cmd_status(msg, command, status);
-
-    if(strcmp(command, "RLO ") || msg[8] != '\0') {
-        printf("%s", msg);
-        return 0;
-    }
-    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
-        printf("successful logout\n");
-        return 1;
-    }
-    if(!strcmp(status, "NOK\n")) {
-        printf("%s not logged in\n", uid);
-        return 0;
-    }
-    if(!strcmp(status, "UNR\n")) {
-        printf("unknown %s\n", uid);
-        return 0;
-    }
-    printf("%s", msg);
-    return 0;
-}
-
-int process_unregister(char *msg, const char *uid) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-
-    get_cmd_status(msg, command, status);
-
-    if(strcmp(command, "RUR ") || msg[8] != '\0') {
-        printf("%s", msg);
-        return 0;
-    }
-    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
-        printf("successful unregister\n");
-        return 1;
-    }
-    if(!strcmp(status, "NOK\n")) {
-        printf("incorrect unregister attempt\n");
-        return 0;
-    }
-    if(!strcmp(status, "UNR\n")) {
-        printf("unknown %s\n", uid);
-        return 0;
-    }
-    printf("%s", msg);
-    return 0;
+    memcpy(cmd, msg, CMD_N_SPACE); // stores the command received from the server
+    cmd[CMD_N_SPACE] = '\0'; // add to the command \0 for the last index
+    memcpy(status, msg+CMD_N_SPACE, STATUS); // stores the status received from the server
+    status[STATUS] = '\0'; // add to the status \0 for the last index
 }
 
 int confirm_open(char *msg) {
@@ -94,76 +26,26 @@ int confirm_open(char *msg) {
         if (!isdigit(msg[i]))
             return 0;
     }
-    /* verify if AID is between 001 and 999 (is not 000) */
+    /* verify if AID is not 000 */
     return !(msg[initial] == '0' && msg[initial+1] == '0' && msg[initial+2] == '0');
-}
-
-void process_open(char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1], aid[AID+2];
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-
-    if(strcmp(command, "ROA "))
-        printf("%s", msg); 
-
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
-        printf("auction could not be started\n");
-
-    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
-        printf("login is needed to open an auction\n");
-
-    else if(!strcmp(status, "OK ") && confirm_open(msg)) {
-        memcpy(aid, msg+CMD_N_SPACE+STATUS-1, AID+1);  // AID including \n
-        aid[AID+1] = '\0';
-        printf("auction started successfully with the identifier %s", aid);
-    }
-    else printf("%s", msg);
-}
-
-void process_close(char *msg, char *aid, const char *uid) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-
-    if(strcmp(command, "RCL ") || msg[8] != '\0')
-        printf("%s", msg);
-
-    else if(!strcmp(status, "OK\n") && msg[7] == '\0')
-        printf("auction was successfully closed\n");
-
-    else if(!strcmp(status, "NLG") && msg[7] == '\n')
-        printf("login is needed to close an auction\n");
-
-    else if(!strcmp(status, "EAU") && msg[7] == '\n')
-        printf("auction %s does not exist\n", aid);
-
-    else if(!strcmp(status, "EOW") && msg[7] == '\n')
-        printf("auction is not owned by user %s\n", uid);
-
-    else if(!strcmp(status, "END") && msg[7] == '\n')
-        printf("auction is already closed\n");
-
-    else printf("%s", msg);
 }
 
 void append_auction(char *string, char *auction) {
     char aux[LST_PRINT+1]; // worst case + '\0'
     
     memcpy(aux, auction, AID+1); // AID + 1 space
-    if (auction[AID+1] == '0') {
+    if (auction[AID+1] == '0') { // if the aid is not active
         memcpy(aux+AID+1, "not active\n", 11);
         aux[LST_PRINT] = '\0';
     }
-    else if (auction[AID+1] == '1') {
+    else if (auction[AID+1] == '1') { // if the aid is active
         memcpy(aux+AID+1, "active\n", 7);
         aux[11] = '\0';
     }
-    strcpy(string + strlen(string), aux);
+    strcpy(string + strlen(string), aux); // Stores the auction's aid and it's state in the string
 }
 
-int get_auctions(char *destination, char *msg) {
+int get_auctions(char *msg, char *destination) {
     char auction[7];
     auction[6] = '\0';
 
@@ -191,78 +73,6 @@ int confirm_list(char *msg, char *auction, int index) {
     }
     /* verify if state is 0 or 1 and if AID is between 001 and 999 (is not 000) */
     return ((auction[4] != '0' && auction[4] != '1') || (auction[0] == '0' && auction[1] == '0' && auction[2] == '0'));
-}
-
-void process_list(char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    char auctions[LST_PRINT*MAX_AUCTION+1];
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-
-    if(strcmp(command, "RLS "))
-        printf("%s", msg);
-
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
-        printf("no auction was yet started\n");
-
-    else if(!strcmp(status, "OK ")) {
-        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_auctions(auctions, msg) == -1)
-            return;
-        printf("Auctions List:\n%s", auctions);
-    }
-    else printf("%s", msg);
-}
-
-void process_ma(char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    char auctions[LST_PRINT*MAX_AUCTION+1];
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-
-    if(strcmp(command, "RMA "))
-        printf("%s", msg);
-    
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
-        printf("you have no ongoing auctions\n");
-
-    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
-        printf("please login first\n");
-
-    else if(!strcmp(status, "OK ")) {
-        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_auctions(auctions, msg) == -1)
-            return;
-        printf("My Auctions:\n%s", auctions);
-    }
-    else printf("%s", msg);
-}
-
-void process_mb(char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    char auctions[LST_PRINT*MAX_AUCTION+1];
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-    
-    if(strcmp(command, "RMB "))
-        printf("%s", msg);
-    
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
-        printf("you have no ongoing bids\n");
-
-    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
-        printf("please login first\n");
-
-    else if(!strcmp(status, "OK ")) {
-        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
-        if (get_auctions(auctions, msg) == -1)
-            return;
-        printf("My Bids:\n%s", auctions);
-    }
-    else printf("%s", msg);
 }
 
 int get_fname_fsize(int fd, char *fname, long *fsize) {
@@ -301,65 +111,6 @@ int get_fname_fsize(int fd, char *fname, long *fsize) {
         }
     }
     return 0;
-}
-
-int process_sa(int fd, char *fname, char *msg) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-    long fsize;
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-    command[CMD_N_SPACE-1] = '\0';
-
-    if(!strcmp(command, "RSA "))
-        printf("%s", msg);
-    
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
-        printf("no file to be sent or other problem\n");
-    }
-
-    else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
-        if (get_fname_fsize(fd, fname, &fsize) == -1)
-            return -1;
-        if (receive_file(fd, fname, fsize, USER_TIMEOUT) == -1)
-            return -1;
-        printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
-    }
-    else printf("%s", msg);
-
-    return 0;
-}
-
-void process_bid(char *msg, char *aid) {
-    char command[CMD_N_SPACE+1], status[STATUS+1];
-
-    get_cmd_status(msg, command, status);
-    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
-    command[CMD_N_SPACE-1] = '\0';
-
-    if(!strcmp(command, "RBD ") || msg[7] != '\n' || msg[8] != '\0')
-        printf("%s", command);
-    
-    else if(!strcmp(status, "NOK")) {
-        printf("auction %s is not active\n", aid);
-    }
-
-    else if(!strcmp(status, "NLG")) {
-        printf("login is needed to bid on an auction\n");
-    }
-
-    else if(!strcmp(status, "ACC")) {
-        printf("bid accepted\n");
-    }
-
-    else if(!strcmp(status, "REF")) {
-        printf("bid refused because a larger bid is already been placed previously\n");
-    }
-
-    else if(!strcmp(status, "ILG")) {
-        printf("user is not allowed to bid in an auction hosted by himself\n");
-    }
-    else printf("%s", msg);
 }
 
 long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, int *bid_time) {
@@ -406,7 +157,7 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     return (long) offset;
 }
 
-long get_bids_list(char *bids, char *msg, long offset) {
+long get_bids_list(char *msg, char *bids, long offset) {
     char bid[BID+1], uid[UID+1], date[DATE_TIME+1];
     long value;
     int bid_time;
@@ -430,7 +181,7 @@ long get_bids_list(char *bids, char *msg, long offset) {
     return offset;
 }
 
-int get_bids(char *bids, char *msg, int initial) {
+int get_bids(char *msg, char *bids, int initial) {
     char host_uid[UID+1], name[NAME+1], fname[FNAME+1], start_date[DATE_TIME+1], end_date[DATE_TIME+1];
     int start_value, timeactive;
     char ints_to_str[MAX_4_SOME_INTS+1];
@@ -515,7 +266,7 @@ int get_bids(char *bids, char *msg, int initial) {
 
     /* verification of bids (B messages) */
     if(msg[offset] != 'E'){ // there are bids for this asset
-        offset = (size_t) get_bids_list(bids, msg, (long) offset);
+        offset = (size_t) get_bids_list(msg, bids, (long) offset);
         if (offset == 0) {
             return -1;
         }
@@ -562,6 +313,271 @@ int get_bids(char *bids, char *msg, int initial) {
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// FUNCTIONS THAT PROCESS A SPECIFIC COMMAND ///////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+int process_login(char *msg, char *uid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+
+    get_cmd_status(msg, command, status);
+
+    if(strcmp(command, "RLI ") || msg[8] != '\0') {
+        printf("%s", msg);
+        return 0;
+    }
+    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
+        printf("successful login\n");
+        return 1;
+    }
+    if(!strcmp(status, "NOK\n")) {
+        printf("incorrect login attempt\n");
+        return 0;
+    }
+    if(!strcmp(status, "REG\n")) {
+        printf("new %s registered\n", uid);
+        return 1;
+    }
+    printf("%s", msg);
+    return 0;
+}
+
+int process_logout(char *msg, const char *uid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+
+    get_cmd_status(msg, command, status);
+
+    if(strcmp(command, "RLO ") || msg[8] != '\0') {
+        printf("%s", msg);
+        return 0;
+    }
+    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
+        printf("successful logout\n");
+        return 1;
+    }
+    if(!strcmp(status, "NOK\n")) {
+        printf("%s not logged in\n", uid);
+        return 0;
+    }
+    if(!strcmp(status, "UNR\n")) {
+        printf("unknown %s\n", uid);
+        return 0;
+    }
+    printf("%s", msg);
+    return 0;
+}
+
+int process_unregister(char *msg, const char *uid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+
+    get_cmd_status(msg, command, status);
+
+    if(strcmp(command, "RUR ") || msg[8] != '\0') {
+        printf("%s", msg);
+        return 0;
+    }
+    if(!strcmp(status, "OK\n") && msg[7] == '\0') {
+        printf("successful unregister\n");
+        return 1;
+    }
+    if(!strcmp(status, "NOK\n")) {
+        printf("incorrect unregister attempt\n");
+        return 0;
+    }
+    if(!strcmp(status, "UNR\n")) {
+        printf("unknown %s\n", uid);
+        return 0;
+    }
+    printf("%s", msg);
+    return 0;
+}
+
+void process_open(char *msg) {
+    char command[CMD_N_SPACE+1], status[STATUS+1], aid[AID+2];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+
+    if(strcmp(command, "ROA "))
+        printf("%s", msg); 
+
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
+        printf("auction could not be started\n");
+
+    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
+        printf("login is needed to open an auction\n");
+
+    else if(!strcmp(status, "OK ") && confirm_open(msg)) {
+        memcpy(aid, msg+CMD_N_SPACE+STATUS-1, AID+1);  // AID including \n
+        aid[AID+1] = '\0';
+        printf("auction started successfully with the identifier %s", aid);
+    }
+    else printf("%s", msg);
+}
+
+void process_close(char *msg, char *aid, const char *uid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+
+    if(strcmp(command, "RCL ") || msg[8] != '\0')
+        printf("%s", msg);
+
+    else if(!strcmp(status, "OK\n") && msg[7] == '\0')
+        printf("auction was successfully closed\n");
+
+    else if(!strcmp(status, "NLG") && msg[7] == '\n')
+        printf("login is needed to close an auction\n");
+
+    else if(!strcmp(status, "EAU") && msg[7] == '\n')
+        printf("auction %s does not exist\n", aid);
+
+    else if(!strcmp(status, "EOW") && msg[7] == '\n')
+        printf("auction is not owned by user %s\n", uid);
+
+    else if(!strcmp(status, "END") && msg[7] == '\n')
+        printf("auction is already closed\n");
+
+    else printf("%s", msg);
+}
+
+void process_list(char *msg) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    char auctions[LST_PRINT*MAX_AUCTION+1];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+
+    if(strcmp(command, "RLS "))
+        printf("%s", msg);
+
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
+        printf("no auction was yet started\n");
+
+    else if(!strcmp(status, "OK ")) {
+        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
+        if (get_auctions(msg, auctions) == -1)
+            return;
+        printf("Auctions List:\n%s", auctions);
+    }
+    else printf("%s", msg);
+}
+
+void process_ma(char *msg) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    char auctions[LST_PRINT*MAX_AUCTION+1];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+
+    if(strcmp(command, "RMA "))
+        printf("%s", msg);
+    
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
+        printf("you have no ongoing auctions\n");
+
+    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
+        printf("please login first\n");
+
+    else if(!strcmp(status, "OK ")) {
+        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
+        if (get_auctions(msg, auctions) == -1)
+            return;
+        printf("My Auctions:\n%s", auctions);
+    }
+    else printf("%s", msg);
+}
+
+void process_mb(char *msg) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    char auctions[LST_PRINT*MAX_AUCTION+1];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+    
+    if(strcmp(command, "RMB "))
+        printf("%s", msg);
+    
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
+        printf("you have no ongoing bids\n");
+
+    else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
+        printf("please login first\n");
+
+    else if(!strcmp(status, "OK ")) {
+        memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
+        if (get_auctions(msg, auctions) == -1)
+            return;
+        printf("My Bids:\n%s", auctions);
+    }
+    else printf("%s", msg);
+}
+
+int process_sa(char *msg, int fd, char *fname) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+    long fsize;
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+    command[CMD_N_SPACE-1] = '\0';
+
+    if(!strcmp(command, "RSA ")){
+        printf("%s", msg);
+        return -1;
+    }
+    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
+        printf("no file to be sent or other problem\n");
+        return -1;
+    }
+
+    else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
+        if (get_fname_fsize(fd, fname, &fsize) == -1)
+            return -1;
+        if (receive_file(fd, fname, fsize, USER_TIMEOUT) == -1)
+            return -1;
+        printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
+    }
+    else printf("%s", msg);
+
+    return 0;
+}
+
+void process_bid(char *msg, char *aid) {
+    char command[CMD_N_SPACE+1], status[STATUS+1];
+
+    get_cmd_status(msg, command, status);
+    status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
+    command[CMD_N_SPACE-1] = '\0';
+
+    if(!strcmp(command, "RBD ") || msg[7] != '\n' || msg[8] != '\0')
+        printf("%s", command);
+    
+    else if(!strcmp(status, "NOK")) {
+        printf("auction %s is not active\n", aid);
+    }
+
+    else if(!strcmp(status, "NLG")) {
+        printf("login is needed to bid on an auction\n");
+    }
+
+    else if(!strcmp(status, "ACC")) {
+        printf("bid accepted\n");
+    }
+
+    else if(!strcmp(status, "REF")) {
+        printf("bid refused because a larger bid is already been placed previously\n");
+    }
+
+    else if(!strcmp(status, "ILG")) {
+        printf("user is not allowed to bid in an auction hosted by himself\n");
+    }
+    else printf("%s", msg);
+}
+
 void process_sr(char *msg, char *aid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char bids[SR_PRINT];
@@ -576,7 +592,7 @@ void process_sr(char *msg, char *aid) {
         printf("%s does not exist\n", aid);
 
     else if(!strcmp(status, "OK ") && msg[7] != ' ') {
-        if (get_bids(bids, msg, CMD_N_SPACE+STATUS-1) == -1)
+        if (get_bids(msg, bids, CMD_N_SPACE+STATUS-1) == -1)
             return;
         printf("Bids from auction %s - %s", aid, bids);
     }
