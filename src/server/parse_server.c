@@ -2,6 +2,7 @@
 #include "../common/utils.h"
 #include "parse_server.h"
 
+/////////////////////////////////////////// UDP ///////////////////////////////////////////////////////////////////////
 
 int confirm_login(const char *buffer, char *uid, char *pass, char *msg){
 
@@ -34,25 +35,6 @@ int confirm_login(const char *buffer, char *uid, char *pass, char *msg){
     return 0;
 }
 
-int confirm_open(const char *uid, const char *pass, const char *name, const char *start_value,
-                const char *timeactive, const char *fname, const char *fsize, char *msg) {
-
-    /* verify if the uid and pass have the correct sizes */
-    if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
-        sprintf(msg, "ERR\n");
-        return -1;
-    }
-    /* verify all the fields */
-    if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_alphanumeric_extra(name) ||
-        !is_numeric(start_value) || !is_numeric(timeactive) || !is_alphanumeric_extra(fname) ||
-        !is_numeric(fsize)) {
-        // TODO: verify *.xxx for filename
-        sprintf(msg, "ERR\n");
-        return -1;
-    }
-    return 0;
-}
-
 int confirm_list_my(const char *buffer, char *uid, char *msg) {
 
     /* verify if the string has the correct size */
@@ -76,6 +58,52 @@ int confirm_list_my(const char *buffer, char *uid, char *msg) {
         return -1;
     }
 
+    return 0;
+}
+
+int confirm_sr(const char *buffer, char *aid, char *msg) {
+
+    /* verify if the string has the correct size */
+    if (strlen(buffer) != SHOW_SND-1) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    /* verify if the '\n' is placed correctly */
+    if(buffer[CMD_N_SPACE+AID] != '\n') {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
+    memcpy(aid, buffer+CMD_N_SPACE, AID);
+
+    /* verify if the aid have the correct size and is only digits */
+    if(strlen(aid) != AID || !is_numeric(aid)) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/////////////////////////////////////////// TCP ///////////////////////////////////////////////////////////////////////
+
+int confirm_open(const char *uid, const char *pass, const char *name, const char *start_value,
+                const char *timeactive, const char *fname, const char *fsize, char *msg) {
+
+    /* verify if the uid and pass have the correct sizes */
+    if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
+    /* verify all the fields */
+    if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_alphanumeric_extra(name) ||
+        !is_numeric(start_value) || !is_numeric(timeactive) || !is_alphanumeric_extra(fname) ||
+        !is_numeric(fsize)) {
+        sprintf(msg, "ERR\n");
+        return -1;
+    }
     return 0;
 }
 
@@ -104,32 +132,6 @@ int confirm_bid(const char *uid, const char *pass, const char *aid, const char *
         sprintf(buffer, "ERR\n");
         return -1;
     }
-    return 0;
-}
-
-int confirm_sr(const char *buffer, char *aid, char *msg) {
-
-    /* verify if the string has the correct size */
-    if (strlen(buffer) != SHOW_SND-1) {
-        sprintf(msg, "ERR\n");
-        return -1;
-    }
-
-    /* verify if the '\n' is placed correctly */
-    if(buffer[CMD_N_SPACE+AID] != '\n') {
-        sprintf(msg, "ERR\n");
-        return -1;
-    }
-
-    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
-    memcpy(aid, buffer+CMD_N_SPACE, AID);
-
-    /* verify if the aid have the correct size and is only digits */
-    if(strlen(aid) != AID || !is_numeric(aid)) {
-        sprintf(msg, "ERR\n");
-        return -1;
-    }
-
     return 0;
 }
 

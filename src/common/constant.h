@@ -15,7 +15,7 @@
 #define DATE 10
 #define HOUR 8
 #define FILEPATH 46 // including \0
-#define DIRNAME 20 // including \0
+#define DIRNAME 20  // including \0
 
 #define UID 6
 #define PASSWORD 8
@@ -52,6 +52,7 @@
                 DATE_TIME+MAX_4_SOME_INTS+6)
 
 #define LST_PRINT (CMD_N_SPACE+11)  // 3 chars plus a space + strlen("not active\n") (worst case)
-#define SR_PRINT (NAME+FNAME+UID+MAX_4_SOME_INTS+DATE_TIME+MAX_4_SOME_INTS+MAX_BIDS*(MAX_4_SOME_INTS+MAX_4_SOME_INTS+DATE_TIME+MAX_4_SOME_INTS+59)+71+32+1) // worst case for show record print including '\0'
-
+// worst case for show record print including '\0'
+#define SR_PRINT (NAME+FNAME+UID+MAX_4_SOME_INTS+DATE_TIME+MAX_4_SOME_INTS+ \
+                MAX_BIDS*(MAX_4_SOME_INTS+MAX_4_SOME_INTS+DATE_TIME+MAX_4_SOME_INTS+59)+71+32+1)
 #endif // __CONSTANT_H__
