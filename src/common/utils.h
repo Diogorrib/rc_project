@@ -28,96 +28,96 @@
 ////////////////////////////////////////// FILES AND DIRECTORIES //////////////////////////////////////////////////////
 
 /// @brief Get the size of the file in bytes
-/// @param fname 
-/// @param fsize 
+/// @param fname File name or path
+/// @param fsize Pointer to a long variable to store the file size
 /// @return -1 indicates that it is possible that fname is not the name of a file or this file does not exist
 int get_file_size(const char *fname, long *fsize);
 
 /// @brief Verify if the directory exists
-/// @param dirname 
+/// @param dirname Directory name or path that is going to be check
 /// @return 1 if true 0 if false
 int verify_directory(const char *dirname);
 
 /// @brief Verify if the file exists
-/// @param filename 
+/// @param filename Filename or path that is going to be check
 /// @return 1 if true 0 if false
 int verify_file(const char *filename);
 
 /// @brief Create a file and its directory (only 1 directory)
-/// @param filename 
-/// @param dirname 
-/// @param fdata 
+/// @param filename Filename or path that is going to be checl
+/// @param dirname Directory where the file should be created
+/// @param fdata Optional data to write to the file (can be NULL)
 /// @return -1 in case of error
 int create_file(const char *filename, const char *dirname, const char *fdata);
 
 ///////////////////////////////////////////// COMMUNICATION ///////////////////////////////////////////////////////////
 
-/// @brief Set send timeout
-/// @param fd 
-/// @param timeout 
+/// @brief Set send timeout for a socket
+/// @param fd File descriptor of the socket
+/// @param timeout Timeout value in seconds 
 /// @return -1 in case of error
 int set_send_timeout(int fd, int timeout);
 
-/// @brief Set receive timeout
-/// @param fd 
-/// @param timeout 
+/// @brief Set receive timeout for a socket
+/// @param fd File descriptor of the socket
+/// @param timeout Timeout value in seconds
 /// @return -1 in case of error
 int set_recv_timeout(int fd, int timeout);
 
 /// @brief Open and read a file and send it using tcp
-/// @param fd 
-/// @param fname 
-/// @param fsize 
+/// @param fd File descriptor of the socket
+/// @param fname Filename or path
+/// @param fsize Size of the file to be sent
 /// @return -1 in case of error
 int send_file(int fd, char *fname, long fsize);
 
 /// @brief Open a file and while the file is not completely written,
 /// writes to the file what is received using tcp
-/// @param fd 
-/// @param fname 
-/// @param fsize 
-/// @param timeout 
+/// @param fd File descriptor of the socket
+/// @param fname Filename or path to save the received file
+/// @param fsize Expected size of the file to be received
+/// @param timeout Timeout value in seconds
 /// @return -1 in case of error and file is also deleted
 int receive_file(int fd, char *fname, long fsize, int timeout);
 
 /// @brief Print the verbose mode message if it is active
-/// @param msg 
-/// @param host 
-/// @param service 
-/// @param mode 
+/// @param msg Message to be printed
+/// @param host IP address of the host
+/// @param service Port or service information
+/// @param mode Flag indicating whether to print the message (1 for yes, 0 for no)
 void vmode_request(const char *msg, const char *host, const char *service, int mode);
 
 /// @brief Print the verbose mode message if it is active
-/// @param msg 
-/// @param host 
-/// @param service 
-/// @param mode 
+/// @param msg Message to be printed
+/// @param host IP address of the host
+/// @param service Port or service information
+/// @param mode Flag indicating whether to print the message (1 for yes, 0 for no)
 void vmode_response(const char *msg, const char *host, const char *service, int mode);
 
 /// @brief Print the verbose mode message if it is active
-/// @param msg 
-/// @param mode 
+/// @param msg Message to be printed
+/// @param mode Flag indicating whether to print the message (1 for yes, 0 for no)
 void vmode_more_info(const char *msg, int mode);
 
 ///////////////////////////////////////////// STRING VERIFICATION ////////////////////////////////////////////////////
 
 /// @brief Verify if the buffer is only digits
-/// @param buffer 
+/// @param buffer Input string to be checked
 /// @return 1 if true 0 if false
 int is_numeric(const char *buffer);
 
 /// @brief Verify if the buffer is only digits and letters
-/// @param buffer 
+/// @param buffer Input string to be checked
 /// @return 1 if true 0 if false
 int is_alphanumeric(const char *buffer);
 
 /// @brief Verify if the buffer is only digits and letters plus '-', '_' and '.'
-/// @param buffer 
+/// @param buffer Input string to be checked
 /// @return 1 if true 0 if false
 int is_alphanumeric_extra(const char *buffer);
 
 /// @brief Verify if the buffer is a date time string
-/// @param buffer 
+/// @param buffer Input string to be checked
 /// @return 1 if true 0 if false
 int isDateTime(const char *buffer);
 

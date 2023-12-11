@@ -5,10 +5,10 @@
 /////////////////////////////////// HELPER FUNCTIONS TO PROCESS COMMANDS //////////////////////////////////////////////
 
 void get_cmd_status(char *msg, char * cmd, char *status) {
-    memcpy(cmd, msg, CMD_N_SPACE); // stores the command received from the server
-    cmd[CMD_N_SPACE] = '\0'; // add to the command \0 for the last index
-    memcpy(status, msg+CMD_N_SPACE, STATUS); // stores the status received from the server
-    status[STATUS] = '\0'; // add to the status \0 for the last index
+    memcpy(cmd, msg, CMD_N_SPACE);              // stores the command received from the server
+    cmd[CMD_N_SPACE] = '\0';                    // add to the command \0 for the last index
+    memcpy(status, msg+CMD_N_SPACE, STATUS);    // stores the status received from the server
+    status[STATUS] = '\0';                      // add to the status \0 for the last index
 }
 
 int confirm_open(char *msg) {
@@ -37,7 +37,7 @@ void append_auction(char *string, char *auction) {
         memcpy(aux+AID+1, "active\n", 7);
         aux[11] = '\0';
     }
-    strcpy(string + strlen(string), aux); // Stores the auction's aid and it's state in the string
+    strcpy(string + strlen(string), aux); // stores the auction's aid and it's state in the string
 }
 
 int get_auctions(char *msg, char *destination) {
@@ -47,12 +47,12 @@ int get_auctions(char *msg, char *destination) {
     for (int i = 0; i < MAX_AUCTION; i++) {
         /* get an auction (AID + 1 space + state + (1 space or \n)) from msg */
         memcpy(auction, msg + 7 + (i*6), 6);
-        if (confirm_list(msg, auction, i)) {
+        if (confirm_list(msg, auction, i)) { // verify if the auction is valid
             printf("%s", msg);
             return -1;
         }
-        append_auction(destination, auction);
-        if (auction[5] == '\n') break; // no more auctions
+        append_auction(destination, auction);   // append an auction to the destination string
+        if (auction[5] == '\n') break;          // no more auctions
     }
     return 0;
 }
@@ -79,13 +79,13 @@ int get_fname_fsize(int fd, char *fname, long *fsize) {
 
     /* receive message from AS */
     while(1) {
-        nread=read(fd,&aux,1); // read only one character
-        if(nread == -1) {   //error
+        nread=read(fd,&aux,1);  // read only one character
+        if(nread == -1) {       //error
             printf("Can't receive from server AS. Try again\n");
             return -1;
         } else if(nread == 0) break; //closed by peer
               
-        if (first_loop) {   /* receive fname */
+        if (first_loop) {               // receive fname 
             if (offset && aux == ' ') { // fname received
                 first_loop = 0;
                 offset = 0;
@@ -96,7 +96,7 @@ int get_fname_fsize(int fd, char *fname, long *fsize) {
             if (offset >= FNAME) { printf("fname not valid\n"); return -1; }
             sprintf(fname+offset, "%c", aux);   // add char to fname
             offset++;
-        } else {    /* receive fsize */
+        } else {                        // receive fsize 
             if (offset && aux == ' ')   // fsize received
                 break;
             if (!isdigit(aux)) { printf("fsize not valid\n"); return -1; }
@@ -112,8 +112,8 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     char ints_to_str[MAX_4_SOME_INTS+1]; // max size of an long
     size_t offset = (size_t) initial;
 
-    memset(uid, '\0', UID+1);
-    memset(date, '\0', DATE_TIME+1);
+    memset(uid, '\0', UID+1);           // initialize the uid with \0 in every index
+    memset(date, '\0', DATE_TIME+1);    // initialize the date with \0 in every index
 
     /* verify if the first letter is B and the second character is a space */
     if (msg[offset] != 'B' || msg[offset+1] != ' ' || msg[offset+2] == ' ')
@@ -157,7 +157,7 @@ long get_bids_list(char *msg, char *bids, long offset) {
     long value;
     int bid_time;
 
-    memset(bid, '\0', BID+1);
+    memset(bid, '\0', BID+1); // initialize the bid with \0 in every index
 
     for (int i = 0; i < MAX_BIDS; i++) {
         /* get a bid from msg (BID) */
@@ -167,7 +167,7 @@ long get_bids_list(char *msg, char *bids, long offset) {
             return 0;
         }
 
-        /* Append a bid to the message that will be shown to user */
+        /* append a bid to the message that will be shown to user */
         sprintf(bids + strlen(bids), "uid: %s\tbid_value: %ld\ttime_of_bid: %s\ttime_since_start: %d seconds\n",
                 uid, value, date, bid_time);
 
@@ -182,13 +182,12 @@ int get_bids(char *msg, char *bids, int initial) {
     char ints_to_str[MAX_4_SOME_INTS+1];
     size_t offset = (size_t) initial;
     
-    /* initialize strings with \0 in every index */
-    memset(host_uid, '\0', UID+1);
-    memset(name, '\0', NAME+1);
-    memset(fname, '\0', FNAME+1);
-    memset(start_date, '\0', DATE_TIME+1);
-    memset(bids, '\0', SR_PRINT);
-    memset(end_date, '\0', DATE_TIME+1);
+    memset(host_uid, '\0', UID+1);              // initialize the host_uid with \0 in every index
+    memset(name, '\0', NAME+1);                 // initialize the name with \0 in every index
+    memset(fname, '\0', FNAME+1);               // initialize the fname with \0 in every index
+    memset(start_date, '\0', DATE_TIME+1);      // initialize the start_date with \0 in every index
+    memset(bids, '\0', SR_PRINT);               // initialize the bids with \0 in every index
+    memset(end_date, '\0', DATE_TIME+1);        // initialize the end_date with \0 in every index
     
     sscanf(msg+offset, "%6s", host_uid);
     offset += UID+1;    // advance string
@@ -250,10 +249,11 @@ int get_bids(char *msg, char *bids, int initial) {
         return -1;
     }
 
-    /* First part of the message shown to user */
+    /* first part of the message shown to user */
     sprintf(bids, "%s (%s) hosted by %s started with value %d, at %s. Will be open during %d seconds:\n",
             name, fname, host_uid, start_value, start_date, timeactive);
 
+    /* verify if i tis the end of the message */
     if (msg[offset-1] == '\n') {
         sprintf(bids + strlen(bids), "No bids yet for this auction\nAuction is still active\n");
         return 0; // auction has no bids yet and is still active
@@ -265,13 +265,13 @@ int get_bids(char *msg, char *bids, int initial) {
         if (offset == 0) {
             return -1;
         }
-    } else
+    } else // this bid had zero auctions
         sprintf(bids + strlen(bids), "No bids were made for this auction\n");
 
-
+    /* verify the it is the end of the message */
     if (msg[offset-1] == '\n') {
         sprintf(bids + strlen(bids), "Auction is still active\n");
-        return 0;
+        return 0; // auction is still active
     }        
 
     /* verify if the first letter is E and the second character is a space */
@@ -302,7 +302,7 @@ int get_bids(char *msg, char *bids, int initial) {
         return -1;
     }
 
-    /* Last part of the message shown to user */
+    /* last part of the message shown to user */
     sprintf(bids + strlen(bids), "Ended at %s, opened for %d seconds.\n", end_date, timeactive);
 
     return 0;
@@ -313,20 +313,26 @@ int get_bids(char *msg, char *bids, int initial) {
 int process_login(char *msg, char *uid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
 
-    get_cmd_status(msg, command, status);
+    /* stores the command and the status in the correspondable variables */
+    get_cmd_status(msg, command, status); 
 
+    /* command verification */
     if(strcmp(command, "RLI ") || msg[8] != '\0') {
         printf("%s", msg);
         return 0;
     }
+
+    /* status verification */
     if(!strcmp(status, "OK\n") && msg[7] == '\0') {
         printf("successful login\n");
         return 1;
     }
+    /* status verification */
     if(!strcmp(status, "NOK\n")) {
         printf("incorrect login attempt\n");
         return 0;
     }
+    /* status verification */
     if(!strcmp(status, "REG\n")) {
         printf("new %s registered\n", uid);
         return 1;
@@ -338,20 +344,26 @@ int process_login(char *msg, char *uid) {
 int process_logout(char *msg, const char *uid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
 
+    /* command verification */
     if(strcmp(command, "RLO ") || msg[8] != '\0') {
         printf("%s", msg);
         return 0;
     }
+
+    /* status verification */
     if(!strcmp(status, "OK\n") && msg[7] == '\0') {
         printf("successful logout\n");
         return 1;
     }
+    /* status verification */
     if(!strcmp(status, "NOK\n")) {
         printf("%s not logged in\n", uid);
         return 0;
     }
+    /* status verification */
     if(!strcmp(status, "UNR\n")) {
         printf("unknown %s\n", uid);
         return 0;
@@ -363,20 +375,26 @@ int process_logout(char *msg, const char *uid) {
 int process_unregister(char *msg, const char *uid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
 
+    /* command verification */
     if(strcmp(command, "RUR ") || msg[8] != '\0') {
         printf("%s", msg);
         return 0;
     }
+
+    /* status verification */
     if(!strcmp(status, "OK\n") && msg[7] == '\0') {
         printf("successful unregister\n");
         return 1;
     }
+    /* status verification */
     if(!strcmp(status, "NOK\n")) {
         printf("incorrect unregister attempt\n");
         return 0;
     }
+    /* status verification */
     if(!strcmp(status, "UNR\n")) {
         printf("unknown %s\n", uid);
         return 0;
@@ -388,18 +406,21 @@ int process_unregister(char *msg, const char *uid) {
 void process_open(char *msg) {
     char command[CMD_N_SPACE+1], status[STATUS+1], aid[AID+2];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
 
+    /* command verification */
     if(strcmp(command, "ROA "))
         printf("%s", msg); 
 
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
         printf("auction could not be started\n");
-
+    /* status verification */
     else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
         printf("login is needed to open an auction\n");
-
+    /* status verification */
     else if(!strcmp(status, "OK ") && confirm_open(msg)) {
         memcpy(aid, msg+CMD_N_SPACE+STATUS-1, AID+1);  // AID including \n
         aid[AID+1] = '\0';
@@ -411,24 +432,27 @@ void process_open(char *msg) {
 void process_close(char *msg, char *aid, const char *uid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
 
+    /* command verification */
     if(strcmp(command, "RCL ") || msg[8] != '\0')
         printf("%s", msg);
 
+    /* status verification */
     else if(!strcmp(status, "OK\n") && msg[7] == '\0')
         printf("auction was successfully closed\n");
-
+    /* status verification */
     else if(!strcmp(status, "NLG") && msg[7] == '\n')
         printf("login is needed to close an auction\n");
-
+    /* status verification */
     else if(!strcmp(status, "EAU") && msg[7] == '\n')
         printf("auction %s does not exist\n", aid);
-
+    /* status verification */
     else if(!strcmp(status, "EOW") && msg[7] == '\n')
         printf("auction is not owned by user %s\n", uid);
-
+    /* status verification */
     else if(!strcmp(status, "END") && msg[7] == '\n')
         printf("auction is already closed\n");
 
@@ -439,15 +463,18 @@ void process_list(char *msg) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char auctions[LST_PRINT*MAX_AUCTION+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
 
+    /* command verification */
     if(strcmp(command, "RLS "))
         printf("%s", msg);
 
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
         printf("no auction was yet started\n");
-
+    /* status verification */
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
         if (get_auctions(msg, auctions) == -1)
@@ -461,18 +488,21 @@ void process_ma(char *msg) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char auctions[LST_PRINT*MAX_AUCTION+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
 
+    /* command verification */
     if(strcmp(command, "RMA "))
         printf("%s", msg);
     
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
         printf("you have no ongoing auctions\n");
-
+    /* status verification */
     else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
         printf("please login first\n");
-
+    /* status verification */
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
         if (get_auctions(msg, auctions) == -1)
@@ -486,18 +516,21 @@ void process_mb(char *msg) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char auctions[LST_PRINT*MAX_AUCTION+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
     
+    /* command verification */
     if(strcmp(command, "RMB "))
         printf("%s", msg);
     
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
         printf("you have no ongoing bids\n");
-
+    /* status verification */
     else if(!strcmp(status, "NLG") && msg[7] == '\n' && msg[8] == '\0')
         printf("please login first\n");
-
+    /* status verification */
     else if(!strcmp(status, "OK ")) {
         memset(auctions, '\0', LST_PRINT*MAX_AUCTION+1);
         if (get_auctions(msg, auctions) == -1)
@@ -511,19 +544,23 @@ int process_sa(char *msg, int fd, char *fname) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     long fsize;
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
     command[CMD_N_SPACE-1] = '\0';
 
+    /* command verification */
     if(!strcmp(command, "RSA ")){
         printf("%s", msg);
         return -1;
     }
+
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
         printf("no file to be sent or other problem\n");
         return -1;
     }
-
+    /* status verification */
     else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
         if (get_fname_fsize(fd, fname, &fsize) == -1)
             return -1;
@@ -539,29 +576,32 @@ int process_sa(char *msg, int fd, char *fname) {
 void process_bid(char *msg, char *aid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
     command[CMD_N_SPACE-1] = '\0';
 
+    /* command verification */
     if(!strcmp(command, "RBD ") || msg[7] != '\n' || msg[8] != '\0')
         printf("%s", command);
     
+    /* status verification */
     else if(!strcmp(status, "NOK")) {
         printf("auction %s is not active\n", aid);
     }
-
+    /* status verification */
     else if(!strcmp(status, "NLG")) {
         printf("login is needed to bid on an auction\n");
     }
-
+    /* status verification */
     else if(!strcmp(status, "ACC")) {
         printf("bid accepted\n");
     }
-
+    /* status verification */
     else if(!strcmp(status, "REF")) {
         printf("bid refused because a larger bid is already been placed previously\n");
     }
-
+    /* status verification */
     else if(!strcmp(status, "ILG")) {
         printf("user is not allowed to bid in an auction hosted by himself\n");
     }
@@ -572,15 +612,18 @@ void process_sr(char *msg, char *aid) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
     char bids[SR_PRINT];
 
+    /* stores the command and the status in the correspondable variables */
     get_cmd_status(msg, command, status);
     status[STATUS-1] = '\0'; // for next strcmp calls is needed strlen(status) = 3
 
+    /* command verification */
     if(strcmp(command, "RRC "))
         printf("%s", msg);
     
+    /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
         printf("%s does not exist\n", aid);
-
+    /* status verification */
     else if(!strcmp(status, "OK ") && msg[7] != ' ') {
         if (get_bids(msg, bids, CMD_N_SPACE+STATUS-1) == -1)
             return;

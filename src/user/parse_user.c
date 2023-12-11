@@ -29,8 +29,8 @@ int confirm_aid_input(char *buffer, char *cmd, char *aid) {
         printf("incorrect %s attempt\n", cmd);
         return -1;
     }
-    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
-    sscanf(buffer+cmd_size, "%3s", aid); // stores the aid received in the command line
+    memset(aid, '\0', AID+1);               // initialize the aid with \0 in every index
+    sscanf(buffer+cmd_size, "%3s", aid);    // stores the aid received in the command line
 
     /* verify if the aid has the correct size */
     if(strlen(aid) != AID) {
@@ -65,9 +65,9 @@ int confirm_login_input(char *buffer, char *uid, char *pass) {
         printf("incorrect login attempt\n");
         return -1;
     }
-    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
-    memset(pass, '\0', PASSWORD+1); // initialize the pass with \0 in every index
-    sscanf(buffer+cmd_size, "%6s", uid); // stores the uid received in the command line
+    memset(uid, '\0', UID+1);                   // initialize the uid with \0 in every index
+    memset(pass, '\0', PASSWORD+1);             // initialize the pass with \0 in every index
+    sscanf(buffer+cmd_size, "%6s", uid);        // stores the uid received in the command line
     sscanf(buffer+cmd_size+UID+1, "%8s", pass); // stores the password received in the command line
 
     /* verify if the uid and pass have the correct sizes */
@@ -88,8 +88,8 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
     size_t offset;
     size_t cmd_size = strlen("open "); // command including the space
     
-    memset(name, '\0', NAME+1); // initialize the name with \0 in every index
-    memset(fname, '\0', FNAME+1); // initialize the fname with \0 in every index
+    memset(name, '\0', NAME+1);     // initialize the name with \0 in every index
+    memset(fname, '\0', FNAME+1);   // initialize the fname with \0 in every index
 
     sscanf(buffer+cmd_size, "%10s", name); // stores the name received in the command line
 
@@ -100,8 +100,8 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
         return -1;
     }
     
-    sscanf(buffer+offset, "%s", fname); // stores the fname received in the command line
-    offset += strlen(fname)+1; // advance string
+    sscanf(buffer+offset, "%s", fname);  // stores the fname received in the command line
+    offset += strlen(fname)+1;           // advance string
 
     /* verify if the spaces are placed correctly */
     if(buffer[offset-1] != ' ' || buffer[offset] == ' ' || buffer[offset] == '-') {
@@ -114,8 +114,8 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
         printf("incorrect open attempt\n");
         return -1;
     }
-    sprintf(aux, "%d", *start_value); // stores the start value received in the command line
-    offset += strlen(aux)+1;    // advance string
+    sprintf(aux, "%d", *start_value);   // stores the start value received in the command line
+    offset += strlen(aux)+1;            // advance string
     
     /* verify if the spaces are placed correctly and max of 6 digits */
     if(buffer[offset-1] != ' ' || buffer[offset] == ' ' || buffer[offset] == '-' || strlen(aux) > 6) {
@@ -128,8 +128,8 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
         printf("incorrect open attempt\n");
         return -1;
     }
-    sprintf(aux, "%d", *timeactive); // stores the time active received in the command line
-    offset += strlen(aux)+1;    // advance string
+    sprintf(aux, "%d", *timeactive);    // stores the time active received in the command line
+    offset += strlen(aux)+1;            // advance string
     /* verify if the last characters are placed correctly and max of 5 digits */
     if(buffer[offset-1] != '\n' || buffer[offset] != '\0' || strlen(aux) > 5) {
         printf("incorrect open attempt\n");
@@ -141,10 +141,10 @@ int confirm_open_input(char *buffer, char *name, char *fname, int *start_value, 
 int confirm_bid_input(char *buffer, char *cmd, char *aid, char *bid_value) {
     size_t cmd_size = strlen(cmd)+1; // cmd including the space
 
-    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
+    memset(aid, '\0', AID+1);                   // initialize the aid with \0 in every index
     memset(bid_value, '\0', MAX_4_SOME_INTS+1); // initialize the bid_value with \0 in every index
 
-    sscanf(buffer+cmd_size, "%3s", aid); // stores the aid received in the command line
+    sscanf(buffer+cmd_size, "%3s", aid);              // stores the aid received in the command line
     sscanf(buffer+cmd_size+AID+1, "%19s", bid_value); // stores the bid value received in the command line
 
     /* verify if the string has the correct size */

@@ -34,8 +34,8 @@ int no_uid_pass(char *command) {
 }
 
 void user_login(const char *aux_uid, const char *aux_pass) {
-    strcpy(uid, aux_uid);
-    strcpy(password, aux_pass);
+    strcpy(uid, aux_uid);       // store uid in the global variable
+    strcpy(password, aux_pass); // store password in the global variable
     logged_in = 1;
 }
 
@@ -48,18 +48,18 @@ int udp(char *buffer, size_t size, char *msg_received) {
     socklen_t addrlen;
     ssize_t n;
 
-    fd=socket(AF_INET,SOCK_DGRAM,0);//UDP socket
-    if(fd==-1) {//error
+    fd=socket(AF_INET,SOCK_DGRAM,0);    // UDP socket
+    if(fd==-1) {                        // error
         printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
     memset(&hints,0,sizeof hints);
-    hints.ai_family=AF_INET;//IPv4
-    hints.ai_socktype=SOCK_DGRAM;//UDP socket
+    hints.ai_family=AF_INET;        // IPv4
+    hints.ai_socktype=SOCK_DGRAM;   // UDP socket
 
     errcode=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(errcode!=0) {//error
+    if(errcode!=0) {    // error
         printf("Can't connect with the server AS. Try again\n");
         close(fd); return -1;
     }
@@ -71,7 +71,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
 
     /* send message to AS */
     n=sendto(fd,buffer,strlen(buffer),0,res->ai_addr,res->ai_addrlen);
-    if(n==-1) {//error
+    if(n==-1) { // error
         printf("Can't send to server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
@@ -84,7 +84,7 @@ int udp(char *buffer, size_t size, char *msg_received) {
     addrlen=sizeof(struct sockaddr_in);
     /* receive message from AS */
     n=recvfrom(fd,msg_received,size,0,(struct sockaddr*)&addr,&addrlen);
-    if(n==-1) {//error
+    if(n==-1) { // error
         printf("Can't receive from server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
@@ -103,29 +103,29 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
 
     memset(&act,0,sizeof act);
     act.sa_handler=SIG_IGN;
-    if (sigaction(SIGPIPE,&act,NULL) == -1) {//error
+    if (sigaction(SIGPIPE,&act,NULL) == -1) {   // error
         printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
-    fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket
-    if(fd == -1) {//error
+    fd=socket(AF_INET,SOCK_STREAM,0);   // TCP socket
+    if(fd == -1) {                      // error
         printf("Can't connect with the server AS. Try again\n");
         return -1;
     }
 
     memset(&hints,0,sizeof hints);
-    hints.ai_family=AF_INET ;//IPv4
-    hints.ai_socktype=SOCK_STREAM;//TCP socket
+    hints.ai_family=AF_INET ;       // IPv4
+    hints.ai_socktype=SOCK_STREAM;  // TCP socket
 
     n=getaddrinfo(as_ip,as_port,&hints,&res);
-    if(n != 0) {//error
+    if(n != 0) {    // error
         printf("Can't connect with the server AS. Try again\n");
         close(fd); return -1;
     }
 
     n=connect(fd,res->ai_addr,res->ai_addrlen);
-    if(n == -1) {//error
+    if(n == -1) {   // error
         printf("Can't connect with the server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
@@ -165,7 +165,7 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
     }
     /* send \n to AS */
     ptr = "\n"; nwritten=write(fd,ptr,1);
-    if(nwritten <= 0) {//error
+    if(nwritten <= 0) { // error
         printf("Can't send to server AS. Try again\n");
         freeaddrinfo(res); close(fd); return -1;
     }
@@ -196,7 +196,8 @@ void login() {
     char msg_received[LOGIN_RCV];
     char aux_uid[UID+1], aux_pass[PASSWORD+1];
 
-    if (confirm_login_input(input_buffer, aux_uid, aux_pass) == -1)
+    /* parsing of the all string received in the command line */
+    if (confirm_login_input(input_buffer, aux_uid, aux_pass) == -1) 
         return;
 
     if (logged_in) { // only one user can be logged in per user app
@@ -204,17 +205,16 @@ void login() {
         return;
     }
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', LOGIN_SND);
-    memset(msg_received, '\0', LOGIN_RCV);
+    memset(buffer, '\0', LOGIN_SND);        // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LOGIN_RCV);  // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "LIN", aux_uid, aux_pass);
 
-    if (udp(buffer, LOGIN_RCV, msg_received) == -1)
+    if (udp(buffer, LOGIN_RCV, msg_received) == -1) // UDP connection with the server
         return;
 
-    if (process_login(msg_received, aux_uid))
+    if (process_login(msg_received, aux_uid))   // analyse the message received
         user_login(aux_uid, aux_pass);
 }
 
@@ -222,22 +222,23 @@ void logout() {
     char buffer[LOGIN_SND];
     char msg_received[LOGIN_RCV];
 
+    /* parsing of the all string received in the command line */
     if (confirm_only_cmd_input(input_buffer, "logout") == -1)
         return;
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("logout")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', LOGIN_SND);
-    memset(msg_received, '\0', LOGIN_RCV);
+    memset(buffer, '\0', LOGIN_SND);        // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LOGIN_RCV);  // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "LOU", uid, password);
 
-    if (udp(buffer, LOGIN_RCV, msg_received) == -1)
+    if (udp(buffer, LOGIN_RCV, msg_received) == -1) // UDP connection with the server
         return;  
 
-    if (process_logout(msg_received, uid))
+    if (process_logout(msg_received, uid))  // analyse the message received
         logged_in = 0;
 }
 
@@ -245,22 +246,23 @@ void unregister() {
     char buffer[LOGIN_SND];
     char msg_received[LOGIN_RCV];
 
+    /* parsing of the all string received in the command line */
     if (confirm_only_cmd_input(input_buffer, "unregister") == -1)
         return;
     
+    /* verification of the existence of uid and password */
     if (no_uid_pass("unregister")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', LOGIN_SND);
-    memset(msg_received, '\0', LOGIN_RCV);
+    memset(buffer, '\0', LOGIN_SND);        // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LOGIN_RCV);  // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s\n", "UNR", uid, password);
 
-    if (udp(buffer, LOGIN_RCV, msg_received) == -1)
+    if (udp(buffer, LOGIN_RCV, msg_received) == -1) // UDP connection with the server
         return;
 
-    if (process_unregister(msg_received, uid))
+    if (process_unregister(msg_received, uid))  // analyse the message received
         logged_in = 0;
 }
 
@@ -271,26 +273,27 @@ void open_auction() {
     int start_value, timeactive;
     long fsize;
 
+    /* parsing of the all string received in the command line */
     if (confirm_open_input(input_buffer, name, fname, &start_value, &timeactive) == -1)
         return;
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("open")) return;
 
-    if (get_file_size(fname, &fsize) == -1)
+    if (get_file_size(fname, &fsize) == -1) // Bytes needed to the file
         return;
     
-    /* initialize strings with \0 in every index */
-    memset(msg_received, '\0', OPEN_RCV);
-    memset(buffer, '\0', OPEN_SND);
+    memset(buffer, '\0', OPEN_SND);         // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', OPEN_RCV);   // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %d %d %s %ld ",
             "OPA", uid, password, name, start_value, timeactive, fname, fsize);
 
-    if (tcp(buffer, fname, OPEN_RCV, msg_received) == -1)
+    if (tcp(buffer, fname, OPEN_RCV, msg_received) == -1)   // TCP connection with the server
         return;
 
-    process_open(msg_received);
+    process_open(msg_received); // analyse the message received
 }
 
 void close_auction() {
@@ -298,83 +301,87 @@ void close_auction() {
     char msg_received[CLS_RCV];
     char aid[AID+1];
 
+    /* parsing of the all string received in the command line */
     if (confirm_aid_input(input_buffer, "close", aid) == -1)
         return;
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("close")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', CLOSE_SND);
-    memset(msg_received, '\0', CLS_RCV);
+    memset(buffer, '\0', CLOSE_SND);        // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', CLS_RCV);    // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s", "CLS", uid, password, aid);
 
-    if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) 
+    if (tcp(buffer, NULL, CLS_RCV, msg_received) == -1) // TCP connection with the server
         return;
 
-    process_close(msg_received, aid, uid);
+    process_close(msg_received, aid, uid);  // analyse the message received
 }
 
 void myauctions(char *first_word){
     char msg_received[LST_RCV];
     char buffer[MY_SND];
 
+    /* parsing of the all string received in the command line */
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("myauctions")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', MY_SND);
-    memset(msg_received, '\0', LST_RCV);
+    memset(buffer, '\0', MY_SND);           // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LST_RCV);    // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "LMA", uid);
-    if (udp(buffer, LST_RCV, msg_received) == -1)
+    if (udp(buffer, LST_RCV, msg_received) == -1)   // UDP connection with the server
         return;
         
-    process_ma(msg_received);
+    process_ma(msg_received);   // analyse the message received
 }
 
 void mybids(char *first_word){ 
     char msg_received[LST_RCV];
     char buffer[MY_SND];
 
+    /* parsing of the all string received in the command line */
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("mybids")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', MY_SND);
-    memset(msg_received, '\0', LST_RCV);
+    memset(buffer, '\0', MY_SND);           // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LST_RCV);    // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "LMB", uid);
-    if (udp(buffer, LST_RCV, msg_received) == -1)
+    if (udp(buffer, LST_RCV, msg_received) == -1)   // UDP connection with the server
         return;
         
-    process_mb(msg_received);
+    process_mb(msg_received);   // analyse the message received
 }
 
 void list(char *first_word) {
     char msg_received[LST_RCV];
     char buffer[CMD_N_SPACE+1];
 
+    /* parsing of the all string received in the command line */
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', CMD_N_SPACE+1);
-    memset(msg_received, '\0', LST_RCV);
+    memset(buffer, '\0', CMD_N_SPACE+1);    // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', LST_RCV);    // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s\n", "LST");
-    if (udp(buffer, LST_RCV, msg_received) == -1)
+    if (udp(buffer, LST_RCV, msg_received) == -1)   // UDP connection with the server
         return;
 
-    process_list(msg_received);
+    process_list(msg_received); // analyse the message received
+
 }
 
 void show_asset(char *first_word){
@@ -382,19 +389,19 @@ void show_asset(char *first_word){
     char buffer[SHOW_SND];
     char fname[FNAME+1], aid[AID+1];
 
+    /* parsing of the all string received in the command line */
     if (confirm_aid_input(input_buffer, first_word, aid) == -1)
         return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', SHOW_SND);
-    memset(msg_received, '\0', SA_RCV);
-    memset(fname, '\0', FNAME+1);
+    memset(buffer, '\0', SHOW_SND);         // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', SA_RCV);     // initialize the message to be received with \0 in every index
+    memset(fname, '\0', FNAME+1);           // initialize the name of the file with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s", "SAS", aid);
 
     /* process_sa will be called during tcp connection to receive the file */
-    if (tcp(buffer, fname, SA_RCV-1, msg_received) == -1) 
+    if (tcp(buffer, fname, SA_RCV-1, msg_received) == -1)   // TCP connection with the server
         return;
 }
 
@@ -404,23 +411,24 @@ void bid(char *first_word){
     char buffer[BID_SND]; 
     char aid[AID+1], bid_value[MAX_4_SOME_INTS+1];
 
+    /* parsing of the all string received in the command line */
     if(confirm_bid_input(input_buffer, first_word, aid, bid_value) == -1){
         return;
     }
 
+    /* verification of the existence of uid and password */
     if (no_uid_pass("bid")) return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', BID_SND);
-    memset(msg_received, '\0', BID_RCV);
+    memset(buffer, '\0', BID_SND);          // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', BID_RCV);    // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s %s %s %s", "BID", uid, password, aid, bid_value);
 
-    if (tcp(buffer, NULL, BID_RCV, msg_received) == -1) 
+    if (tcp(buffer, NULL, BID_RCV, msg_received) == -1) // TCP connection with the server
         return;
 
-    process_bid(msg_received, aid);
+    process_bid(msg_received, aid); // analyse the message received
 }
 
 void show_record(char *first_word){
@@ -428,12 +436,12 @@ void show_record(char *first_word){
     char buffer[SHOW_SND];
     char aid[AID+1];
 
+    /* parsing of the all string received in the command line */
     if (confirm_aid_input(input_buffer, first_word, aid) == -1)
         return;
 
-    /* initialize strings with \0 in every index */
-    memset(buffer, '\0', SHOW_SND);
-    memset(msg_received, '\0', SR_RCV);
+    memset(buffer, '\0', SHOW_SND);     // initialize the message to be sent with \0 in every index
+    memset(msg_received, '\0', SR_RCV); // initialize the message to be received with \0 in every index
 
     /* Create the message to send to AS */
     sprintf(buffer, "%s %s\n", "SRC", aid);
