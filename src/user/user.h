@@ -13,12 +13,12 @@ void filter_input(int argc, char **argv);
 //////////////////////////////////////// HELPER FUNCTIONS TO CARRY OUT THE ////////////////////////////////////////////
 //////////////////////////////////////// OPERATIONS GIVEN BY THE COMMANDS /////////////////////////////////////////////
 
-/// @brief Checks if there is an uid and a password in the user aplication
+/// @brief Checks if there is an UID and a password in the user aplication
 /// @param command Command to kown what instruction we are checking
-/// @return 1 if there is no uid or password, 0 ohterwise
+/// @return 1 if there is no UID or password, 0 ohterwise
 int no_uid_pass(char *command);
 
-/// @brief Save the login data (uid and password) and set logged_in to 1
+/// @brief Save the login data (UID and password) and set logged_in to 1
 /// @param aux_uid User ID
 /// @param aux_pass User password
 void user_login(const char *aux_uid, const char *aux_pass);

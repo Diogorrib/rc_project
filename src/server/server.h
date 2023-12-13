@@ -7,17 +7,58 @@
 /// @brief  Verify the parameters from the start of AS app, if present -p and -v
 /// update PORT to use and turn on the verbose mode, if not present default
 /// PORT is used and verbose mode remains off
-/// @param argc
-/// @param argv
+/// @param argc Number of command-line arguments
+/// @param argv Array of command-line arguments
 void filter_input(int argc, char **argv);
 
 ///////////////////////////////////////////////// UDP /////////////////////////////////////////////////////////////////
 
+/// @brief Deals with the server login situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void login(char *buffer, char *msg, char *host, char *service);
+
+/// @brief Deals with the server logout situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void logout(char *buffer, char *msg, char *host, char *service);
+
+/// @brief Deals with the server unregister situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void unregister(char *buffer, char *msg, char *host, char *service);
+
+/// @brief Deals with the server listing of user auctions situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void myauctions(char *buffer, char *msg, char *host, char *service);
+
+/// @brief Deals with the server listing of user bids situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void mybids(char *buffer, char *msg, char *host, char *service);
+
+/// @brief Deals with the server listing of an auction situation
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
+void list(char *msg, char *host, char *service);
+
+/// @brief Deals with the server showing all the auction information situation
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
 void show_record(char *buffer, char *msg, char *host, char *service);
 
 /// @brief Verify the possible actions for udp communication

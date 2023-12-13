@@ -17,17 +17,17 @@ int confirm_login(const char *buffer, char *uid, char *pass, char *msg){
         return -1;
     }
     
-    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
-    memset(pass, '\0', PASSWORD+1); // initialize the pass with \0 in every index
-    memcpy(uid, buffer+CMD_N_SPACE, UID);
-    memcpy(pass, buffer+CMD_N_SPACE+UID+1, PASSWORD);
+    memset(uid, '\0', UID+1);                           // initialize the UID with \0 in every index
+    memset(pass, '\0', PASSWORD+1);                     // initialize the password with \0 in every index
+    memcpy(uid, buffer+CMD_N_SPACE, UID);               // stores the UID received from the user
+    memcpy(pass, buffer+CMD_N_SPACE+UID+1, PASSWORD);   // stores the password received from the user
 
-    /* verify if the uid and pass have the correct sizes */
+    /* verify if the UID and password have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
         sprintf(msg, "ERR\n");
         return -1;
     }
-    /* verify if the uid is only digits and the pass is only letters and digits */
+    /* verify if the UID is only digits and the password is only letters and digits */
     if (!is_numeric(uid) || !is_alphanumeric(pass)) {
         sprintf(msg, "ERR\n");
         return -1;
@@ -49,10 +49,10 @@ int confirm_list_my(const char *buffer, char *uid, char *msg) {
         return -1;
     }
 
-    memset(uid, '\0', UID+1); // initialize the uid with \0 in every index
-    memcpy(uid, buffer+CMD_N_SPACE, UID);
+    memset(uid, '\0', UID+1);               // initialize the UID with \0 in every index
+    memcpy(uid, buffer+CMD_N_SPACE, UID);   // stores the UID received from the user
 
-    /* verify if the uid have the correct size and is only digits */
+    /* verify if the UID have the correct size and is only digits */
     if(strlen(uid) != UID || !is_numeric(uid)) {
         sprintf(msg, "ERR\n");
         return -1;
@@ -75,8 +75,8 @@ int confirm_sr(const char *buffer, char *aid, char *msg) {
         return -1;
     }
 
-    memset(aid, '\0', AID+1); // initialize the aid with \0 in every index
-    memcpy(aid, buffer+CMD_N_SPACE, AID);
+    memset(aid, '\0', AID+1);               // initialize the aid with \0 in every index
+    memcpy(aid, buffer+CMD_N_SPACE, AID);   // stores the aid received from the user
 
     /* verify if the aid have the correct size and is only digits */
     if(strlen(aid) != AID || !is_numeric(aid)) {
@@ -92,11 +92,12 @@ int confirm_sr(const char *buffer, char *aid, char *msg) {
 int confirm_open(const char *uid, const char *pass, const char *name, const char *start_value,
                 const char *timeactive, const char *fname, const char *fsize, char *msg) {
 
-    /* verify if the uid and pass have the correct sizes */
+    /* verify if the UID and password have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
         sprintf(msg, "ERR\n");
         return -1;
     }
+
     /* verify all the fields */
     if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_alphanumeric_extra(name) ||
         !is_numeric(start_value) || !is_numeric(timeactive) || !is_alphanumeric_extra(fname) ||
@@ -108,11 +109,13 @@ int confirm_open(const char *uid, const char *pass, const char *name, const char
 }
 
 int confirm_close(const char *uid, const char *pass, const char *aid, char *buffer) {
-    /* verify if the uid, pass and aid have the correct sizes */
+
+    /* verify if the UID, password and aid have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD || strlen(aid) != AID) {
         sprintf(buffer, "ERR\n");
         return -1;
     }
+
     /* verify all the fields */
     if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_numeric(aid)) {
         sprintf(buffer, "ERR\n");
@@ -122,11 +125,13 @@ int confirm_close(const char *uid, const char *pass, const char *aid, char *buff
 }
 
 int confirm_bid(const char *uid, const char *pass, const char *aid, const char *bid_value, char *buffer) {
-    /* verify if the uid, pass and aid have the correct sizes */
+
+    /* verify if the UID, password and aid have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD || strlen(aid) != AID) {
         sprintf(buffer, "ERR\n");
         return -1;
     }
+    
     /* verify all the fields */
     if (!is_numeric(uid) || !is_alphanumeric(pass) || !is_numeric(aid) || !is_numeric(bid_value)) {
         sprintf(buffer, "ERR\n");

@@ -25,7 +25,7 @@ void filter_input(int argc, char **argv) {
 //////////////////////////////////////// OPERATIONS GIVEN BY THE COMMANDS /////////////////////////////////////////////
 
 int no_uid_pass(char *command) {
-    /* there is no uid or password on the user app */
+    /* there is no UID or password on the user app */
     if (strlen(uid) != UID || strlen(password) != PASSWORD) {
         printf("incorrect %s attempt. Login first\n", command);
         return 1;
@@ -226,7 +226,7 @@ void logout() {
     if (confirm_only_cmd_input(input_buffer, "logout") == -1)
         return;
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("logout")) return;
 
     memset(buffer, '\0', LOGIN_SND);        // initialize the message to be sent with \0 in every index
@@ -250,7 +250,7 @@ void unregister() {
     if (confirm_only_cmd_input(input_buffer, "unregister") == -1)
         return;
     
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("unregister")) return;
 
     memset(buffer, '\0', LOGIN_SND);        // initialize the message to be sent with \0 in every index
@@ -277,7 +277,7 @@ void open_auction() {
     if (confirm_open_input(input_buffer, name, fname, &start_value, &timeactive) == -1)
         return;
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("open")) return;
 
     if (get_file_size(fname, &fsize) == -1) // Bytes needed to the file
@@ -305,7 +305,7 @@ void close_auction() {
     if (confirm_aid_input(input_buffer, "close", aid) == -1)
         return;
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("close")) return;
 
     memset(buffer, '\0', CLOSE_SND);        // initialize the message to be sent with \0 in every index
@@ -328,7 +328,7 @@ void myauctions(char *first_word){
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("myauctions")) return;
 
     memset(buffer, '\0', MY_SND);           // initialize the message to be sent with \0 in every index
@@ -350,7 +350,7 @@ void mybids(char *first_word){
     if (confirm_only_cmd_input(input_buffer, first_word) == -1)
         return;
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("mybids")) return;
 
     memset(buffer, '\0', MY_SND);           // initialize the message to be sent with \0 in every index
@@ -416,7 +416,7 @@ void bid(char *first_word){
         return;
     }
 
-    /* verification of the existence of uid and password */
+    /* verification of the existence of UID and password */
     if (no_uid_pass("bid")) return;
 
     memset(buffer, '\0', BID_SND);          // initialize the message to be sent with \0 in every index
@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
 
     filter_input(argc, argv);
 
-    /* uid and password initialized as empty string to make requests */
+    /* UID and password initialized as empty string to make requests */
     memset(uid, '\0', UID+1);
     memset(password, '\0', PASSWORD+1);
 

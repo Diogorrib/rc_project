@@ -112,7 +112,7 @@ long confirm_bid(char *msg, long initial, char *uid, long *value, char *date, in
     char ints_to_str[MAX_4_SOME_INTS+1]; // max size of an long
     size_t offset = (size_t) initial;
 
-    memset(uid, '\0', UID+1);           // initialize the uid with \0 in every index
+    memset(uid, '\0', UID+1);           // initialize the UID with \0 in every index
     memset(date, '\0', DATE_TIME+1);    // initialize the date with \0 in every index
 
     /* verify if the first letter is B and the second character is a space */

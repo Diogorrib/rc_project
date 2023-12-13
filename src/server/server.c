@@ -135,11 +135,11 @@ void parse_udp_buffer(char *buffer, char *msg, struct sockaddr_in addr, socklen_
         sprintf(msg, "ERR\n");
         return;
     }
-    // get the action to do
+    /* get the action to do */
     memset(cmd, '\0', CMD_N_SPACE+1);
     memcpy(cmd, buffer, CMD_N_SPACE);
 
-    // get info about action to do and about the peer
+    /* get info about action to do and about the peer */
     errcode=getnameinfo((struct sockaddr*)&addr,addrlen,host,sizeof host,service,sizeof service,0);
     if(errcode!=0) {
         vmode_more_info("ERR: UDP: getnameinfo\n", verbose_mode);
@@ -204,7 +204,7 @@ void udp() {
     FD_ZERO(&inputs); // Clear input mask
     FD_SET(fd,&inputs); // Set UDP channel on
 
-    vmode_more_info("UDP started\n", verbose_mode); ///////////////////////////////////////////////////////////////////////////////////////////////
+    vmode_more_info("UDP started\n", verbose_mode); 
 
     while(1) {
         testfds=inputs; // Reload mask
@@ -519,7 +519,7 @@ void tcp() {
     socklen_t addrlen;
     char msg_sent[OPEN_RCV];
 
-// TCP SERVER SECTION
+    // TCP SERVER SECTION
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET;
     hints.ai_socktype=SOCK_STREAM;
@@ -589,15 +589,15 @@ void filter_input(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
         /* update the port where AS app is running */
         if (!strcmp(argv[i], "-p"))
-            as_port = argv[i+1];
+            as_port = argv[i+1]; // Set default port to the port read in the command line
 
         else if (!strcmp(argv[i], "-v")) {
-            verbose_mode = 1;
+            verbose_mode = 1; // Set verbose mode to True
         }
     }
 }
 
-/* End process when SIGCHLD is received */
+/// @brief End process when SIGCHLD is received
 void childSignalHandler() {
     int status; wait(&status);
     vmode_more_info("...Exit TCP process\n", verbose_mode);
@@ -626,16 +626,16 @@ int main(int argc, char **argv) {
         aid++;
     }
 
-    /* End parent (TCP) process when child end */
+    /* end parent (TCP) process when child end */
     act.sa_handler = childSignalHandler;
     sigemptyset (&act.sa_mask);
     act.sa_flags = 0;
-    if (sigaction(SIGCHLD, &act, NULL) == -1) {//error
+    if (sigaction(SIGCHLD, &act, NULL) == -1) { // error
         vmode_more_info("ERR: child handler\n", verbose_mode);
         return -1;
     }
 
-    /* Create a child process to have UDP and TCP processes */
+    /* create a child process to have UDP and TCP processes */
     switch (child_pid = fork()) {
     case -1:
         vmode_more_info("ERR: creating child process\n", verbose_mode);
@@ -649,7 +649,7 @@ int main(int argc, char **argv) {
     default: // TCP process
         tcp();
         vmode_more_info("ERR: Exit TCP process...\n", verbose_mode);
-        kill(child_pid, SIGKILL); // End child (UDP) process when parent end
+        kill(child_pid, SIGKILL); // end child (UDP) process when parent end
         vmode_more_info("...Exit UDP process\n", verbose_mode);
         break;
     }

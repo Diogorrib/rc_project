@@ -18,9 +18,9 @@ int confirm_only_cmd_input(char *buffer, const char *cmd);
 
 //////////////////////////////////////// FUNCTIONS FOR A SPECIFIC COMMAND /////////////////////////////////////////////
 
-/// @brief Verify command plus uid plus password and new line character
+/// @brief Verify command plus UID plus password and new line character
 /// @param buffer Buffer that stores the message received in the command line
-/// @param uid Buffer that is going to receive the uid of the user
+/// @param uid Buffer that is going to receive the UID of the user
 /// @param pass Buffer that is going to receive the password of the user
 /// @return -1 if input is not correct, 0 otherwise
 int confirm_login_input(char *buffer, char *uid, char *pass);

@@ -65,8 +65,6 @@ int create_bid_value(const char *aid, int bid_value, char *fdata);
 /// @return 1 if the files are created and 0 if that was not possible
 int create_open_files(const char *aid, const char *uid, char *fdata);
 
-/* verifica se excedeu o tempo e cria o ficheiro */
-
 /// @brief Get the actual time and verify if the auction aid is expired,
 /// if so create the END_(aid).txt file.
 /// The time written in the end file is the time when the auction expired.

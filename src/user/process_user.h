@@ -83,21 +83,21 @@ int get_bids(char *msg, char *bids, int initial);
 ///////////////////////////////// FUNCTIONS THAT PROCESS A SPECIFIC COMMAND ///////////////////////////////////////////
 
 /// @brief Verify if response message from AS is correct, 
-/// Gives feedback to the user whether the operation was executed successfully or not
+/// gives feedback to the user whether the operation was executed successfully or not
 /// @param msg Buffer that stores the message received from the server
 /// @param uid Buffer that stores the UID received from the server
 /// @return 1 if login was made, 0 otherwise
 int process_login(char *msg, char *uid);
 
 /// @brief Verify if response message from AS is correct, 
-/// Gives feedback to the user whether the operation was executed successfully or not
+/// gives feedback to the user whether the operation was executed successfully or not
 /// @param msg Buffer that stores the message received from the server
 /// @param uid Buffer that stores the UID already received from the user
 /// @return 1 if logout was made, 0 otherwise
 int process_logout(char *msg, const char *uid);
 
 /// @brief Verify if response message from AS is correct, 
-/// Gives feedback to the user whether the operation was executed successfully or not
+/// gives feedback to the user whether the operation was executed successfully or not
 /// @param msg Buffer that stores the message received from the server
 /// @param uid Buffer that stores the UID already received from the user
 /// @return 1 if logout was made, 0 otherwise

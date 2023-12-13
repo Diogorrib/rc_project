@@ -65,17 +65,17 @@ int confirm_login_input(char *buffer, char *uid, char *pass) {
         printf("incorrect login attempt\n");
         return -1;
     }
-    memset(uid, '\0', UID+1);                   // initialize the uid with \0 in every index
-    memset(pass, '\0', PASSWORD+1);             // initialize the pass with \0 in every index
+    memset(uid, '\0', UID+1);                   // initialize the UID with \0 in every index
+    memset(pass, '\0', PASSWORD+1);             // initialize the password with \0 in every index
     sscanf(buffer+cmd_size, "%6s", uid);        // stores the uid received in the command line
     sscanf(buffer+cmd_size+UID+1, "%8s", pass); // stores the password received in the command line
 
-    /* verify if the uid and pass have the correct sizes */
+    /* verify if the UID and password have the correct sizes */
     if(strlen(uid) != UID || strlen(pass) != PASSWORD) {
         printf("incorrect login attempt\n");
         return -1;
     }
-    /* verify if the uid is only digits and the pass is only letters and digits */
+    /* verify if the UID is only digits and the password is only letters and digits */
     if (!is_numeric(uid) || !is_alphanumeric(pass)) {
         printf("incorrect login attempt\n");
         return -1;
