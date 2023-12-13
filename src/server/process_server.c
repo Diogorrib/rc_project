@@ -263,7 +263,7 @@ int process_login(const char *uid, const char *pass, char *msg) {
         return 0;
     }
     sprintf(msg, "RLI REG\n");
-    return 0;
+    return 1;
 }
 
 int process_logout(const char *uid, const char *pass, char *msg) {

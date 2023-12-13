@@ -73,9 +73,9 @@ void myauctions(char *buffer, char *msg, char *host, char *service) {
     verify_all_end();
 
     if (process_ma(uid,msg))
-        sprintf(response, "RMA executed, uid: %s", uid);
+        sprintf(response, "RMA with auctions, uid: %s", uid);
     else
-        sprintf(response, "RMA not executed, uid: %s", uid);
+        sprintf(response, "RMA without auctions, uid: %s", uid);
     vmode_response(response, host, service, verbose_mode);
 }
 
@@ -91,9 +91,9 @@ void mybids(char *buffer, char *msg, char *host, char *service) {
     verify_all_end();
 
     if (process_mb(uid,msg))
-        sprintf(response, "RMB executed, uid: %s", uid);
+        sprintf(response, "RMB with auctions, uid: %s", uid);
     else
-        sprintf(response, "RMB not executed, uid: %s", uid);
+        sprintf(response, "RMB without auctions, uid: %s", uid);
     vmode_response(response, host, service, verbose_mode);
 }
 
@@ -102,9 +102,9 @@ void list(char *msg, char *host, char *service) {
     verify_all_end();
     
     if (process_list(msg))
-        vmode_response("RLS executed", host, service, verbose_mode);
+        vmode_response("RLS with auctions", host, service, verbose_mode);
     else
-        vmode_response("RLS not executed", host, service, verbose_mode);
+        vmode_response("RLS without auctions", host, service, verbose_mode);
 }
 
 void show_record(char *buffer, char *msg, char *host, char *service) { 
@@ -166,7 +166,7 @@ void parse_udp_buffer(char *buffer, char *msg, struct sockaddr_in addr, socklen_
         show_record(buffer, msg, host, service);
     else {
         sprintf(msg, "ERR\n");
-        vmode_response("Not a valid request", host, service, verbose_mode);
+        vmode_response("Not a valid UDP request", host, service, verbose_mode);
     }
 }
 
@@ -390,7 +390,7 @@ int close_auction(int fd, char *buffer, char *host, char *service) {
     if (process_close(uid, pass, aid_auction, buffer))
         sprintf(response, "RCL executed, uid: %s, aid: %s", uid, aid_auction);
     else
-        sprintf(response, "RCL not executed, uid: %s", uid);
+        sprintf(response, "RCL not executed, uid: %s, aid: %s", uid, aid_auction);
     vmode_response(response, host, service, verbose_mode);
     return 0;
 }
@@ -460,7 +460,7 @@ int bid(int fd, char *buffer, char *host, char *service) {
     verify_auction_end(aid_bid);
     
     if (process_bid(uid, pass, aid_bid, bid_value, buffer))
-        sprintf(response, "RBD not executed, uid: %s, aid: %s", uid, aid_bid);
+        sprintf(response, "RBD executed, uid: %s, aid: %s", uid, aid_bid);
     else
         sprintf(response, "RBD not executed, uid: %s, aid: %s", uid, aid_bid);
     vmode_response(response, host, service, verbose_mode);
@@ -504,7 +504,7 @@ void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t a
             vmode_response("RBD not executed", host, service, verbose_mode);
     } else {
         sprintf(buffer, "ERR\n");
-        vmode_response("Not a valid request", host, service, verbose_mode);
+        vmode_response("Not a valid TCP request", host, service, verbose_mode);
     }
     
     write_to_tcp(fd, buffer);
