@@ -132,7 +132,11 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
 
     nleft=(ssize_t)strlen(msg_sent); ptr=msg_sent;
     /* send message to AS not inclunding the \n */
-    while (nleft>0){nwritten=write(fd,ptr,(size_t)nleft);
+    while (nleft>0){if(set_send_timeout(fd, USER_TIMEOUT) == -1) {
+                        printf("Can't send to server AS. Try again\n");
+                        freeaddrinfo(res); close(fd); return -1;
+                    }
+                    nwritten=write(fd,ptr,(size_t)nleft);
                     if(nwritten <= 0){//error
                         printf("Can't send to server AS. Try again\n");
                         freeaddrinfo(res); close(fd); return -1;}
@@ -156,22 +160,23 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
         ssize_t sent_bytes;
         /* Sending file data */
         while (((sent_bytes = sendfile(fd, file, &offset, BUFSIZ)) > 0) && (remain_data > 0)) {
-                remain_data -= sent_bytes;
-        } if (remain_data != 0) {
-            printf("Error sending file %s\n", fname);
-            close(file); freeaddrinfo(res); close(fd); return -1;
+            if(set_send_timeout(fd, USER_TIMEOUT) == -1) {
+                printf("Error sending file %s\n", fname);
+                close(file); freeaddrinfo(res); close(fd); return -1;
+            }
+            remain_data -= sent_bytes;
         }
         close(file);
     }
     /* send \n to AS */
     ptr = "\n"; nwritten=write(fd,ptr,1);
-    if(nwritten <= 0) { // error
-        printf("Can't send to server AS. Try again\n");
-        freeaddrinfo(res); close(fd); return -1;
-    }
     nleft=size; ptr=msg_received;
     /* receive message from AS */
-    while (nleft>0){nread=read(fd,ptr,(size_t)nleft);
+    while (nleft>0){if(set_recv_timeout(fd, USER_TIMEOUT) == -1) {
+                        printf("Can't receive from server AS. Try again\n");
+                        freeaddrinfo(res); close(fd); return -1;
+                    }
+                    nread=read(fd,ptr,(size_t)nleft);
                     if(nread == -1){//error
                         printf("Can't receive from server AS. Try again\n");
                         freeaddrinfo(res); close(fd); return -1;}
@@ -182,7 +187,6 @@ int tcp(char *msg_sent, char *fname, ssize_t size, char *msg_received) {
             freeaddrinfo(res); close(fd); return -1;
         }
     }
-
     freeaddrinfo(res);
     close(fd);
     return 0;

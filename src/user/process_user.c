@@ -542,6 +542,7 @@ void process_mb(char *msg) {
 
 int process_sa(char *msg, int fd, char *fname) {
     char command[CMD_N_SPACE+1], status[STATUS+1];
+    char current_dir[BUFSIZ];
     long fsize;
 
     /* stores the command and the status in the correspondable variables */
@@ -556,17 +557,19 @@ int process_sa(char *msg, int fd, char *fname) {
     }
 
     /* status verification */
-    else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0') {
+    else if(!strcmp(status, "NOK") && msg[7] == '\0') {
         printf("no file to be sent or other problem\n");
         return -1;
     }
     /* status verification */
-    else if(!strcmp(status, "OK ") && msg[7] != ' ') {  
+    else if(!strcmp(status, "OK ") && msg[7] != ' ') {
         if (get_fname_fsize(fd, fname, &fsize) == -1)
             return -1;
         if (receive_file(fd, fname, fsize, USER_TIMEOUT) == -1)
             return -1;
-        printf("%s file has been received and its size is %ld bytes\n", fname, fsize);
+        getcwd(current_dir, BUFSIZ);
+        printf("%s file has been received and was stored in %s, its size is %ld bytes\n",
+                fname, current_dir, fsize);
     }
     else printf("%s", msg);
 
