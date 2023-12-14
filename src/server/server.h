@@ -62,10 +62,10 @@ void list(char *msg, char *host, char *service);
 void show_record(char *buffer, char *msg, char *host, char *service);
 
 /// @brief Verify the possible actions for udp communication
-/// @param buffer 
-/// @param msg 
-/// @param addr 
-/// @param addrlen 
+/// @param buffer Buffer that stores the message received from the user
+/// @param msg Buffer that is going to receive the message to send to the user
+/// @param addr Address structure containing information about the sender
+/// @param addrlen Size of the address structure 
 void parse_udp_buffer(char *buffer, char *msg, struct sockaddr_in addr, socklen_t addrlen);
 
 /// @brief Wait for udp requests and then process them
@@ -74,28 +74,55 @@ void udp();
 ///////////////////////////////////////////////// TCP //////////////////////////////////////////////////////////////////
 
 /// @brief Read a sequence of characters until find a space or newline or exceded the limit (to_read)
-/// @param fd 
-/// @param buffer 
-/// @param to_read 
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param to_read Size of the string to read including the space or newline
 /// @return -1 in case of error or if the string is empty or if the limit was exceded
 int read_from_tcp(int fd, char *buffer, int to_read);
 
 /// @brief Write the buffer to the tcp socket
-/// @param fd 
-/// @param buffer 
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message to send to the user
 /// @return -1 in case of error
 int write_to_tcp(int fd, char *buffer);
 
+/// @brief Deals with openning an auction 
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
+/// @return -1 in case of error, 0 if the instruction can't be executed or 1 if the instruction can be executed
 int open_auction(int fd, char *buffer, char *host, char *service);
+
+/// @brief Deals with closing an auction 
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
+/// @return -1 in case of error, 0 if the instruction can't be executed or 1 if the instruction can be executed
 int close_auction(int fd, char *buffer, char *host, char *service);
+
+/// @brief Deals with showing the details of a specific asset
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent
+/// @return -1 in case of error, 0 if the instruction can't be executed or 1 if the instruction can be executed
 int show_asset(int fd, char *buffer, char *host, char *service);
+
+/// @brief Deals with placing a bid on an auction
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param host IP where the message is going to be sent
+/// @param service PORT where the message is going to be sent 
+/// @return -1 in case of error, 0 if the instruction can't be executed or 1 if the instruction can be executed
 int bid(int fd, char *buffer, char *host, char *service);
 
 /// @brief Verify the possible actions for tcp communication
-/// @param buffer 
-/// @param msg 
-/// @param addr 
-/// @param addrlen 
+/// @param fd File descriptor of the socket to communicate with the user using the TCP protocol
+/// @param buffer Buffer that stores the message received from the user
+/// @param addr Address structure containing information about the sender
+/// @param addrlen Size of the address structure
 void parse_tcp_buffer(int fd, char *buffer, struct sockaddr_in addr, socklen_t addrlen);
 
 /// @brief Wait for tcp requests and then process them

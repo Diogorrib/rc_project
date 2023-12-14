@@ -48,7 +48,7 @@ int get_auctions(char *msg, char *destination) {
         /* get an auction (AID + 1 space + state + (1 space or \n)) from msg */
         memcpy(auction, msg + 7 + (i*6), 6);
         if (confirm_list(msg, auction, i)) { // verify if the auction is valid
-            printf("%s", msg);
+            printf("auction not valid\n");
             return -1;
         }
         append_auction(destination, auction);   // append an auction to the destination string
@@ -163,7 +163,7 @@ long get_bids_list(char *msg, char *bids, long offset) {
         /* get a bid from msg (BID) */
         offset = confirm_bid(msg, offset, uid, &value, date, &bid_time);
         if (offset == 0) {
-            printf("%s", msg);
+            printf("bid not valid\n");
             return 0;
         }
 
@@ -318,7 +318,7 @@ int process_login(char *msg, char *uid) {
 
     /* command verification */
     if(strcmp(command, "RLI ") || msg[8] != '\0') {
-        printf("%s", msg);
+        printf("error command by server\n");
         return 0;
     }
 
@@ -337,7 +337,7 @@ int process_login(char *msg, char *uid) {
         printf("new %s registered\n", uid);
         return 1;
     }
-    printf("%s", msg);
+    printf("error command by server\n");
     return 0;
 }
 
@@ -349,7 +349,7 @@ int process_logout(char *msg, const char *uid) {
 
     /* command verification */
     if(strcmp(command, "RLO ") || msg[8] != '\0') {
-        printf("%s", msg);
+        printf("error command by server\n");
         return 0;
     }
 
@@ -368,7 +368,7 @@ int process_logout(char *msg, const char *uid) {
         printf("unknown %s\n", uid);
         return 0;
     }
-    printf("%s", msg);
+    printf("error command by server\n");
     return 0;
 }
 
@@ -380,7 +380,7 @@ int process_unregister(char *msg, const char *uid) {
 
     /* command verification */
     if(strcmp(command, "RUR ") || msg[8] != '\0') {
-        printf("%s", msg);
+        printf("error command by server\n");
         return 0;
     }
 
@@ -399,7 +399,7 @@ int process_unregister(char *msg, const char *uid) {
         printf("unknown %s\n", uid);
         return 0;
     }
-    printf("%s", msg);
+    printf("error command by server\n");
     return 0;
 }
 
@@ -412,7 +412,7 @@ void process_open(char *msg) {
 
     /* command verification */
     if(strcmp(command, "ROA "))
-        printf("%s", msg); 
+        printf("error command by server\n"); 
 
     /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
@@ -426,7 +426,7 @@ void process_open(char *msg) {
         aid[AID+1] = '\0';
         printf("auction started successfully with the identifier %s", aid);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 void process_close(char *msg, char *aid, const char *uid) {
@@ -438,7 +438,7 @@ void process_close(char *msg, char *aid, const char *uid) {
 
     /* command verification */
     if(strcmp(command, "RCL ") || msg[8] != '\0')
-        printf("%s", msg);
+        printf("error command by server\n");
 
     /* status verification */
     else if(!strcmp(status, "OK\n") && msg[7] == '\0')
@@ -456,7 +456,7 @@ void process_close(char *msg, char *aid, const char *uid) {
     else if(!strcmp(status, "END") && msg[7] == '\n')
         printf("auction is already closed\n");
 
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 void process_list(char *msg) {
@@ -469,7 +469,7 @@ void process_list(char *msg) {
 
     /* command verification */
     if(strcmp(command, "RLS "))
-        printf("%s", msg);
+        printf("error command by server\n");
 
     /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
@@ -481,7 +481,7 @@ void process_list(char *msg) {
             return;
         printf("Auctions List:\n%s", auctions);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 void process_ma(char *msg) {
@@ -494,7 +494,7 @@ void process_ma(char *msg) {
 
     /* command verification */
     if(strcmp(command, "RMA "))
-        printf("%s", msg);
+        printf("error command by server\n");
     
     /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
@@ -509,7 +509,7 @@ void process_ma(char *msg) {
             return;
         printf("My Auctions:\n%s", auctions);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 void process_mb(char *msg) {
@@ -522,7 +522,7 @@ void process_mb(char *msg) {
     
     /* command verification */
     if(strcmp(command, "RMB "))
-        printf("%s", msg);
+        printf("error command by server\n");
     
     /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
@@ -537,7 +537,7 @@ void process_mb(char *msg) {
             return;
         printf("My Bids:\n%s", auctions);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 int process_sa(char *msg, int fd, char *fname) {
@@ -552,7 +552,7 @@ int process_sa(char *msg, int fd, char *fname) {
 
     /* command verification */
     if(!strcmp(command, "RSA ")){
-        printf("%s", msg);
+        printf("error command by server\n");
         return -1;
     }
 
@@ -567,11 +567,14 @@ int process_sa(char *msg, int fd, char *fname) {
             return -1;
         if (receive_file(fd, fname, fsize, USER_TIMEOUT) == -1)
             return -1;
-        getcwd(current_dir, BUFSIZ);
-        printf("%s file has been received and was stored in %s, its size is %ld bytes\n",
+        if(getcwd(current_dir, BUFSIZ) == NULL){
+            printf("can't get current directory\n");
+            return -1;
+        }
+        printf("%s file has been received and was stored in '%s', its size is %ld bytes\n",
                 fname, current_dir, fsize);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 
     return 0;
 }
@@ -586,7 +589,7 @@ void process_bid(char *msg, char *aid) {
 
     /* command verification */
     if(!strcmp(command, "RBD ") || msg[7] != '\n' || msg[8] != '\0')
-        printf("%s", command);
+        printf("error command by server\n");
     
     /* status verification */
     else if(!strcmp(status, "NOK")) {
@@ -608,7 +611,7 @@ void process_bid(char *msg, char *aid) {
     else if(!strcmp(status, "ILG")) {
         printf("user is not allowed to bid in an auction hosted by himself\n");
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }
 
 void process_sr(char *msg, char *aid) {
@@ -621,7 +624,7 @@ void process_sr(char *msg, char *aid) {
 
     /* command verification */
     if(strcmp(command, "RRC "))
-        printf("%s", msg);
+        printf("error command by server\n");
     
     /* status verification */
     else if(!strcmp(status, "NOK") && msg[7] == '\n' && msg[8] == '\0')
@@ -632,5 +635,5 @@ void process_sr(char *msg, char *aid) {
             return;
         printf("Bids from auction %s - %s", aid, bids);
     }
-    else printf("%s", msg);
+    else printf("error command by server\n");
 }

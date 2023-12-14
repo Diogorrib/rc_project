@@ -214,7 +214,6 @@ void udp() {
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                //printf("------------------UDP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
@@ -557,7 +556,6 @@ void tcp() {
         out_fds=select(FD_SETSIZE,&testfds,(fd_set *)NULL,(fd_set *)NULL,(struct timeval *) &timeout);
         switch(out_fds) {
             case 0:
-                //printf("------------------TCP------------------\n");
                 break;
             case -1:
                 vmode_more_info("ERR: UDP: select\n", verbose_mode);
@@ -618,7 +616,7 @@ int main(int argc, char **argv) {
         if (mkdir("AUCTIONS", 0700) == -1)
             return -1;
 
-    for(int i = 1; i < MAX_AUCTION; i++) {
+    for(int i = 1; i <= MAX_AUCTION; i++) {
         char dirname[20];
         sprintf(dirname, "AUCTIONS/%03d", i);
         if(!verify_directory(dirname))

@@ -145,7 +145,7 @@ int receive_file(int fd, char *fname, long fsize, int timeout) {
     /* open file for writing */
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
-        printf("Error opening file %s for writing\n", fname);
+        printf("ERR: opening file %s for writing\n", fname);
         return -1;
     }
 
@@ -167,7 +167,7 @@ int receive_file(int fd, char *fname, long fsize, int timeout) {
         fwrite(buffer, 1, (size_t)bytes_received, file); // write in the file what is in the buffer
     }
     if (nleft) {    // verify if the file was completely read if not delete the file
-        printf("not all data in the file %s was received\n", fname);
+        printf("ERR: not all data in the file %s was received\n", fname);
         fclose(file); unlink(fname);
         return -1;
     }

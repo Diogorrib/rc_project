@@ -470,7 +470,7 @@ int main(int argc, char **argv) {
     while(1) {
         /* Get a line from the input terminal */
         if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL) {
-            printf("ERR: Command not valid\n");
+            printf("Command not valid\n");
             continue;
         }
         memset(first_word, '\0', FIRST_WORD); // does not save the string from previous fgets call
@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
         else if (!strcmp("show_record", first_word) || !strcmp("sr", first_word))
             show_record(first_word);
         else
-            printf("ERR: Command '%s' not valid\n", first_word);
+            printf("Command '%s' not valid\n", first_word);
     }
     return 0;
 }
