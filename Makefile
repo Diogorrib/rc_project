@@ -71,6 +71,8 @@ clean-data:
 
 # clean files received using show_asset or sa command in user app
 clean-sa:
-	rm -f *.txt *.png *.jpg   
+	rm -f *.txt *.png *.jpg
 
-#valgrind --leak-check=full ./user
+# clean all server data, files received in show asset, .o and executable files
+clean-all:
+	rm -rf USERS AUCTIONS *.txt *.png *.jpg $(OBJECTS) $(TARGETS) $(TARGET_EXECS)
